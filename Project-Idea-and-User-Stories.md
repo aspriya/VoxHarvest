@@ -94,7 +94,14 @@ When a user creates a project, the app creates a folder on their file system:
   * User hits Spacebar again to Stop.
   * App writes temporary file -> Spawns `ffmpeg` process -> Converts to `wavs/file_{index}.wav` (Mono, 22050Hz).
   * Update `project.json` status to `recorded`.
+  * Update `project.json` status to `recorded`.
 * **US-3.3 (Navigation):** Auto-advance to next sentence on successful save. Allow manual navigation via Left/Right arrow keys.
+* **US-3.4 (Script Management):**
+  * **Edit:** User can click an "Edit" icon near the text to modify the sentence (fix typos, etc.). Updates `project.json`.
+  * **Delete:** User can delete a sentence. App removes it from the list and cleans up associated `project.json` entry.
+* **US-3.5 (Playback):**
+  * **Play:** User can click a "Play" icon on any "recorded" item to hear the saved audio for verification.
+  * **Visual Feedback:** Waveform highlights (e.g., changes color) during playback to indicate active state.
 
 ### Module 4: Export & Validation
 

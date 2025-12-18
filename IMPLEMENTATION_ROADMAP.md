@@ -41,6 +41,10 @@ This document outlines the phased approach to building VoiceForge Desktop, with 
             -   **Queueing**: Use `p-queue` or simple promise chain to prevent file write race conditions if user spam-clicks "Next".
             -   **FFmpeg**: Spawn `ffmpeg` process.
 -   **State**: `useProjectStore` (Zustand) holds the *working* copy. Syncs to disk via "Auto-save" (debounce 2s) or immediate save on status change.
+-   **Script Actions**:
+    -   **Edit**: Inline text editing.
+    -   **Delete**: remove from array. *Note*: Deleting items may leave orphaned WAV files or require filename re-indexing logic (currently handled by strictly index-based filename mapping).
+    -   **Playback**: `handlePlayItem` loads specific file into `AudioEngine` for instant review.
 
 ### 2.4 AI Text Generation (Multi-Provider)
 -   **Providers**: OpenAI (GPT-3.5/4) and Google Gemini (Flash/Pro).
