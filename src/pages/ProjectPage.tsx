@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useProjectStore } from '@/store/projectStore'
 import * as Tone from 'tone'
@@ -8,6 +8,8 @@ import { EffectRack } from '@/components/EffectRack'
 import { Progress } from '@/components/ui/progress'
 import AudioVisualizer from '@/components/AudioVisualizer'
 import { ArrowLeft, Mic, Square, Play, SkipForward, SkipBack, Wand2, Loader2, Plus, Trash2, Edit2, PlayCircle } from 'lucide-react'
+import GeneratorModal from '@/components/script-gen/GeneratorModal'
+import { useToast } from "@/hooks/use-toast"
 // ...
 
 import { useSettingsStore } from '@/store/settingsStore'
@@ -257,13 +259,14 @@ export default function ProjectPage() {
 
     // ...
 
-    // ...
-
-    // AI Generation State
+    // UI State
     const [isGenOpen, setIsGenOpen] = useState(false)
-    const [topic, setTopic] = useState('')
-    const [count, setCount] = useState(5)
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false)
     const [isGenerating, setIsGenerating] = useState(false)
+    const [topic, setTopic] = useState("") // Keeping for fallback or removing if unused
+    const [count, setCount] = useState(5)
+
+    const { toast } = useToast()
 
     useEffect(() => {
         if (!currentProject || currentProject.id !== id) {
@@ -421,34 +424,44 @@ export default function ProjectPage() {
                                 <Plus className="h-4 w-4" />
                             </Button>
                         </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Generate Script</DialogTitle>
-                                <DialogDescription>Use AI to generate sentences for your dataset.</DialogDescription>
-                            </DialogHeader>
-                            {!hasKey ? (
-                                <div className="text-yellow-500 text-sm">Please configure an API Key in Settings first.</div>
-                            ) : (
-                                <div className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="topic" className="text-right">Topic</Label>
-                                        <Input id="topic" value={topic} onChange={e => setTopic(e.target.value)} className="col-span-3" placeholder="e.g. Daily conversation, Science facts" />
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="count" className="text-right">Count</Label>
-                                        <Input id="count" type="number" value={count} onChange={e => setCount(Number(e.target.value))} className="col-span-3" min={1} max={50} />
-                                    </div>
-                                </div>
-                            )}
-                            <DialogFooter>
-                                <Button disabled={!hasKey || isGenerating || !topic} onClick={handleGenerate}>
-                                    {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                                    Generate
-                                </Button>
-                            </DialogFooter>
-                        </DialogContent>
                     </Dialog>
                 </div>
+
+                {/* Generator Modal */}
+                <Dialog open={isGenOpen} onOpenChange={setIsGenOpen}>
+                    <GeneratorModal
+                        isOpen={isGenOpen}
+                        onClose={() => setIsGenOpen(false)}
+                        onGenerate={async (prompt, count, systemPromptOverride) => {
+                            console.log('[ProjectPage] onGenerate called with:', { prompt, count, systemPromptOverride })
+                            setIsGenerating(true)
+                            try {
+                                // Use the passed prompt (or override)
+                                // Our updated generateText accepts systemPromptOverride
+                                const sentences = await window.api.generateText(prompt, count, systemPromptOverride)
+                                const newItems: ProjectItem[] = sentences.map(text => ({
+                                    id: generateUUID(),
+                                    text,
+                                    status: 'pending',
+                                    duration: 0
+                                }))
+                                addItems(newItems)
+                                setIsGenOpen(false)
+                            } catch (e) {
+                                console.error(e)
+                                toast({
+                                    title: "Generation Failed",
+                                    description: "Could not generate sentences. Check API Key.",
+                                    variant: "destructive"
+                                })
+                            } finally {
+                                setIsGenerating(false)
+                            }
+                        }}
+                        isGenerating={isGenerating}
+                    />
+                </Dialog>
+
                 <div className="flex-1 overflow-auto">
                     {/* fallback logging */}
                     {/*
@@ -472,7 +485,7 @@ export default function ProjectPage() {
                         }}
                     </AutoSizer>
                     */}
-                    <div className="flex flex-col">
+                    <div className="flex flex-col pb-4">
                         {items && items.length > 0 ? items.map((_, index) => (
                             <Row
                                 key={index}
@@ -481,6 +494,19 @@ export default function ProjectPage() {
                                 data={{ items, currentItemIndex, setCurrentIndex, handleEditItem, handleDeleteItem, handlePlayItem }}
                             />
                         )) : <div className="p-4 text-center text-muted-foreground text-sm">No script items</div>}
+
+                        {/* Add More Button */}
+                        <div className="p-4 flex justify-center">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full border-dashed border-slate-700 bg-slate-900/50 hover:bg-slate-800 text-slate-400"
+                                onClick={() => setIsGenOpen(true)}
+                            >
+                                <Plus className="h-3 w-3 mr-2" />
+                                Add More
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Temp Recordings Section */}
@@ -643,6 +669,25 @@ export default function ProjectPage() {
             </div>
 
             <EffectRack state={audioState} setPitch={setPitch} setEQ={setEQ} />
+
+            <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Settings</DialogTitle>
+                        <DialogDescription>Configure your API Keys.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="openai" className="text-right">OpenAI Key</Label>
+                            <Input id="openai" value={openaiApiKey || ''} onChange={(e) => useSettingsStore.getState().setApiKey('openai', e.target.value)} className="col-span-3" type="password" />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="gemini" className="text-right">Gemini Key</Label>
+                            <Input id="gemini" value={geminiApiKey || ''} onChange={(e) => useSettingsStore.getState().setApiKey('gemini', e.target.value)} className="col-span-3" type="password" />
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div >
     )
 }

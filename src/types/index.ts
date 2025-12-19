@@ -8,6 +8,14 @@ export interface Project {
     currentIndex: number;
     items: ProjectItem[];
     tempRecordings?: TempRecording[];
+    genSettings?: GenerationSettings;
+}
+
+export interface GenerationSettings {
+    mainLanguage: string;
+    secondaryLanguage?: string;
+    domain: string;
+    lastPrompt?: string;
 }
 
 export interface TempRecording {
@@ -68,7 +76,7 @@ export interface IpcApi {
     getSettings: () => Promise<Settings>;
     saveSettings: (settings: Settings) => Promise<void>;
     selectDirectory: () => Promise<string | undefined>;
-    generateText: (prompt: string, count: number) => Promise<string[]>;
+    generateText: (prompt: string, count: number, systemPromptOverride?: string) => Promise<string[]>;
     saveProject: (project: Project) => Promise<boolean>;
     readAudio: (path: string) => Promise<ArrayBuffer>;
     deleteFile: (path: string) => Promise<boolean>;

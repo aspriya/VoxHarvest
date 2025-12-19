@@ -178,20 +178,28 @@ ipcMain.handle("save-project", async (_, project) => {
   await fs.writeFile(jsonPath, JSON.stringify(project, null, 2), "utf-8");
   return true;
 });
-ipcMain.handle("generate-text", async (_, prompt, count) => {
+ipcMain.handle("generate-text", async (_, prompt, count, systemPromptOverride) => {
   const settings = store.get("selectedProvider") ? store.store : { selectedProvider: "openai", openaiApiKey: store.get("openaiApiKey") };
   const provider = settings.selectedProvider || "openai";
-  const systemPrompt = `You are a creative technical writer designed to generate distinct, high-quality, and pronounceable sentences for a Text-to-Speech dataset. 
+  const defaultSystemPrompt = `You are a creative technical writer designed to generate distinct, high-quality, and pronounceable sentences for a Text-to-Speech dataset. 
   Output ONLY a raw JSON array of strings. Do not include markdown formatting (like \`\`\`json). 
   Topic: ${prompt}
   Count: ${count}`;
+  const systemPrompt = systemPromptOverride || defaultSystemPrompt;
+  console.log(`[Main] generate-text called. Override present? ${!!systemPromptOverride}`);
+  console.log(`[Main] Final System Prompt used:`, systemPrompt);
   console.log(`Generating ${count} sentences using ${provider} for topic: "${prompt}"`);
   try {
     if (provider === "openai") {
       if (!settings.openaiApiKey) throw new Error("OpenAI API Key not configured");
       const openai = new OpenAI({ apiKey: settings.openaiApiKey });
+      const messages = [{ role: "system", content: systemPrompt }];
+      if (systemPromptOverride) {
+        messages.push({ role: "user", content: prompt });
+      }
+      console.log("[Main] OpenAI Messages Payload:", JSON.stringify(messages, null, 2));
       const completion = await openai.chat.completions.create({
-        messages: [{ role: "system", content: systemPrompt }],
+        messages,
         model: "gpt-3.5-turbo"
       });
       const content = completion.choices[0].message.content || "[]";

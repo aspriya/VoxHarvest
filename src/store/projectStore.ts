@@ -18,6 +18,8 @@ interface ProjectState {
     // Temp Recording Actions
     addTempRecording: (recording: TempRecording) => void
     deleteTempRecording: (id: string) => Promise<void>
+    // Gen Settings
+    updateGenSettings: (settings: import('@/types').GenerationSettings) => void
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -101,14 +103,20 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             } : null
         }))
 
-        // Delete actual file (UI should probably await this, but store handles logic)
-        // Construct full path for deleting: project.path + /wavs/ + filename
-        // The recording.path we store should probably be "wavs/filename" or just "filename".
-        // Let's assume recording.path is relative to project root or inside wavs.
-        // Implementation Plan said: "Relative path in wavs folder" e.g. "temp_123.wav".
+        // Delete actual file
         const filePath = `${currentProject.path}\\wavs\\${recording.path}`
         await window.api.deleteFile(filePath)
 
+        get().saveProject()
+    },
+
+    updateGenSettings: (settings) => {
+        set(state => ({
+            currentProject: state.currentProject ? {
+                ...state.currentProject,
+                genSettings: settings
+            } : null
+        }))
         get().saveProject()
     },
 
@@ -121,7 +129,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             ...currentProject,
             items,
             currentIndex: currentItemIndex,
-            tempRecordings: currentProject.tempRecordings // Ensure this is preserved/updated
+            tempRecordings: currentProject.tempRecordings,
+            genSettings: currentProject.genSettings
         }
 
         // Persist to disk (IPC)

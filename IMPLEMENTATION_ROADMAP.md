@@ -125,3 +125,24 @@ This document outlines the phased approach to building VoiceForge Desktop, with 
 -   **Management**:
     -   Display separate list for Temp Recordings.
     -   Allow permanent deletion (File + Metadata).
+
+## Phase 7: Advanced Script Generation
+**Focus**: High-quality dataset creation via controlled prompting.
+
+### 7.1 Generator UI Overhaul
+-   **Modal**: Split into 'Simple' and 'Advanced' tabs (or just expand fields).
+-   **Fields**: Add Dropdowns for Main/Secondary languages. Add 'Domain' text input.
+-   **Preview**: Add a collapsible text area showing the generated System Prompt.
+
+### 7.2 Logic & Persistence
+-   **Prompt Builder**: Implement `buildSystemPrompt(main, secondary, domain, customInst)` function in frontend.
+-   **State**: Save `genSettings` (last prompt, selected languages) into `project.json` or `settings.json`.
+-   **Presets**: Hardcode initial presets (News, Casual, Tech) in a `constants.ts` file.
+
+### 7.3 Backend Updates
+-   **IPC**: Update `generate-text` to accept an optional `systemPromptOverride`. If present, use it directly instead of constructing one.
+
+### 7.4 Script Extension (Refinement)
+-   **Feature**: Ability to add more sentences to an existing project.
+-   **UI**: "Add More" button at the bottom of the virtualized list.
+-   **Behavior**: Appends generated items to the end of the `items` array.

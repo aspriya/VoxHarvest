@@ -81,6 +81,10 @@ When a user creates a project, the app creates a folder on their file system:
   * *Logic:* App sends prompt to OpenAI.
   * *Prompt Engineering:* "Generate {count} sentences about {topic}. Style: {style}. Return ONLY raw text, one sentence per line. No numbering."
   * *Result:* content is parsed and appended to the `items` array in `project.json` with status `pending`.
+* **US-2.3 (Extend Script):** User clicks "Add More" at the bottom of the script list.
+  * *Action:* Opens the Generator Modal again.
+  * *Logic:* New sentences are appended to the existing list (not replacing it).
+  * *Context:* (Advanced) The generator is aware of the previous context/mode to maintain consistency.
 
 ### Module 3: The Recording Studio (Core UI)
 
@@ -317,3 +321,18 @@ When a user creates a project, the app creates a folder on their file system:
 * **US-5.3 (Management):**
   * **List:** A dedicated section shows 'Temp Recordings'.
   * **Delete:** Deleting a temp recording permanently removes the WAV file and the metadata entry. No 'Undo'.
+
+### Module 6: Advanced Script Generation
+* **US-6.1 (Dual Language Support):**
+  * **UI:** Modal features two tabs: 'Simple' (legacy) and 'Advanced'.
+  * **Input:** In Advanced mode, user can select a 'Main Language' (e.g., Sinhala) and a 'Secondary Language' (e.g., English).
+  * **Behavior:** The prompt instructs the AI to treat the Secondary Language as a source for loanwords/technical terms, while strictly adhering to the Main Language's grammar.
+* **US-6.2 (Prompt Control):**
+  * **Preview:** User can view the constructed system prompt before generation.
+  * **Edit:** User can manually edit the prompt to add specific instructions (e.g., 'Use formal tone').
+  * **Persistence:** The last used custom prompt is saved *per project*.
+* **US-6.3 (Presets):**
+  * **Selection:** User can choose from presets like 'News Anchor', 'Casual Vlogger', 'Tech Reviewer' to auto-fill the Domain/Style fields.
+  * **Scenarios:**
+      * *Purist:* Main=Sinhala, Secondary=None -> Formal grammar.
+      * *Tech Reviewer:* Main=Sinhala, Secondary=English -> Code-switching enabled.

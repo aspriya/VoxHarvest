@@ -248,16 +248,22 @@ ipcMain.handle('save-project', async (_, project: Project) => {
   return true
 })
 
-ipcMain.handle('generate-text', async (_, prompt, count) => {
+ipcMain.handle('generate-text', async (_, prompt, count, systemPromptOverride) => {
   const settings = store.get('selectedProvider') ? store.store : { selectedProvider: 'openai', openaiApiKey: store.get('openaiApiKey') } as Settings
   // Fallback to simpler check if store structure varies or verify 'store.store' usage 
   // 'store.store' gives full object in electron-store.
 
   const provider = settings.selectedProvider || 'openai'
-  const systemPrompt = `You are a creative technical writer designed to generate distinct, high-quality, and pronounceable sentences for a Text-to-Speech dataset. 
+
+  const defaultSystemPrompt = `You are a creative technical writer designed to generate distinct, high-quality, and pronounceable sentences for a Text-to-Speech dataset. 
   Output ONLY a raw JSON array of strings. Do not include markdown formatting (like \`\`\`json). 
   Topic: ${prompt}
   Count: ${count}`
+
+  const systemPrompt = systemPromptOverride || defaultSystemPrompt
+
+  console.log(`[Main] generate-text called. Override present? ${!!systemPromptOverride}`)
+  console.log(`[Main] Final System Prompt used:`, systemPrompt)
 
   console.log(`Generating ${count} sentences using ${provider} for topic: "${prompt}"`)
 
@@ -266,8 +272,15 @@ ipcMain.handle('generate-text', async (_, prompt, count) => {
       if (!settings.openaiApiKey) throw new Error("OpenAI API Key not configured")
       const openai = new OpenAI({ apiKey: settings.openaiApiKey })
 
+      const messages: any[] = [{ role: "system", content: systemPrompt }]
+      if (systemPromptOverride) {
+        messages.push({ role: "user", content: prompt }) // If override is used, prompt becomes the user message
+      }
+
+      console.log('[Main] OpenAI Messages Payload:', JSON.stringify(messages, null, 2))
+
       const completion = await openai.chat.completions.create({
-        messages: [{ role: "system", content: systemPrompt }],
+        messages: messages,
         model: "gpt-3.5-turbo",
       })
 
@@ -281,7 +294,7 @@ ipcMain.handle('generate-text', async (_, prompt, count) => {
       const genAI = new GoogleGenerativeAI(settings.geminiApiKey)
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
 
-      const result = await model.generateContent(systemPrompt)
+      const result = await model.generateContent(systemPrompt) // Gemini uses a single prompt for now
       const response = await result.response
       const text = response.text()
 
