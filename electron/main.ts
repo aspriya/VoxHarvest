@@ -248,7 +248,33 @@ ipcMain.handle('save-project', async (_, project: Project) => {
   return true
 })
 
-ipcMain.handle('generate-text', async (_, prompt, count, systemPromptOverride) => {
+ipcMain.handle('get-models', async (_, provider: 'openai' | 'gemini') => {
+  // Read fresh settings directly from store for key access
+  const apiKey = provider === 'openai' ? store.get('openaiApiKey') : store.get('geminiApiKey')
+
+  if (!apiKey) {
+    throw new Error(`${provider === 'openai' ? 'OpenAI' : 'Gemini'} API Key is missing. Please check Settings.`)
+  }
+
+  try {
+    if (provider === 'openai') {
+      const openai = new OpenAI({ apiKey: apiKey as string })
+      const list = await openai.models.list()
+      return list.data.filter(m => m.id.startsWith('gpt')).map(m => m.id).sort()
+    } else if (provider === 'gemini') {
+      // Google SDK doesn't always expose listModels simply in all versions.
+      // Returning stable list for now to ensure reliability.
+      return ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+    }
+    return []
+  } catch (e: any) {
+    console.error(`Failed to fetch models for ${provider}`, e)
+    const msg = e?.message || "Unknown error"
+    throw new Error(`Failed to fetch models: ${msg}`)
+  }
+})
+
+ipcMain.handle('generate-text', async (_, prompt, count, systemPromptOverride, modelId) => {
   const settings = store.get('selectedProvider') ? store.store : { selectedProvider: 'openai', openaiApiKey: store.get('openaiApiKey') } as Settings
   // Fallback to simpler check if store structure varies or verify 'store.store' usage 
   // 'store.store' gives full object in electron-store.
@@ -265,7 +291,12 @@ ipcMain.handle('generate-text', async (_, prompt, count, systemPromptOverride) =
   console.log(`[Main] generate-text called. Override present? ${!!systemPromptOverride}`)
   console.log(`[Main] Final System Prompt used:`, systemPrompt)
 
-  console.log(`Generating ${count} sentences using ${provider} for topic: "${prompt}"`)
+  // Use provided modelId or fallback to defaults
+  let selectedModel = modelId
+  if (!selectedModel) {
+    selectedModel = provider === 'openai' ? 'gpt-3.5-turbo' : 'gemini-1.5-flash'
+  }
+  console.log(`Generating ${count} sentences using ${provider} (Model: ${selectedModel}) for topic: "${prompt}"`)
 
   try {
     if (provider === 'openai') {
@@ -281,7 +312,7 @@ ipcMain.handle('generate-text', async (_, prompt, count, systemPromptOverride) =
 
       const completion = await openai.chat.completions.create({
         messages: messages,
-        model: "gpt-3.5-turbo",
+        model: selectedModel,
       })
 
       const content = completion.choices[0].message.content || '[]'
@@ -292,7 +323,7 @@ ipcMain.handle('generate-text', async (_, prompt, count, systemPromptOverride) =
     else if (provider === 'gemini') {
       if (!settings.geminiApiKey) throw new Error("Gemini API Key not configured")
       const genAI = new GoogleGenerativeAI(settings.geminiApiKey)
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+      const model = genAI.getGenerativeModel({ model: selectedModel })
 
       const result = await model.generateContent(systemPrompt) // Gemini uses a single prompt for now
       const response = await result.response

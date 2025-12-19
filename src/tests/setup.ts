@@ -28,6 +28,11 @@ Object.defineProperty(window, 'api', {
 
         // AI
         generateText: vi.fn().mockResolvedValue(['Mock sentence 1.', 'Mock sentence 2.']),
+        getModels: vi.fn().mockImplementation((provider) => {
+            if (provider === 'openai') return Promise.resolve(['gpt-3.5-turbo', 'gpt-4o'])
+            if (provider === 'gemini') return Promise.resolve(['gemini-pro', 'gemini-1.5-flash'])
+            return Promise.resolve([])
+        }),
 
         // Utils
         pathJoin: vi.fn().mockImplementation((...args) => args.join('/')),

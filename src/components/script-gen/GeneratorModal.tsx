@@ -10,6 +10,7 @@ import { Wand2, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import { buildSystemPrompt } from '@/utils/promptBuilder'
 import { useProjectStore } from '@/store/projectStore'
 import { GENERATION_PRESETS } from '@/constants'
+import { ModelSelector } from './ModelSelector'
 
 interface GeneratorModalProps {
     isOpen: boolean;
@@ -73,11 +74,16 @@ export default function GeneratorModal({ isOpen, onClose, onGenerate, isGenerati
 
     return (
         <DialogContent className="sm:max-w-[600px] bg-slate-900 text-slate-100 border-slate-800">
-            <DialogHeader>
-                <DialogTitle>Generate Scripts (AI)</DialogTitle>
-                <DialogDescription className="text-slate-400">
-                    Create synthetic datasets using LLMs.
-                </DialogDescription>
+            <DialogHeader className="flex flex-row items-center justify-between">
+                <div className="space-y-1">
+                    <DialogTitle>Generate Scripts (AI)</DialogTitle>
+                    <DialogDescription className="text-slate-400">
+                        Create synthetic datasets using LLMs.
+                    </DialogDescription>
+                </div>
+                <div className="pr-6">
+                    <ModelSelector />
+                </div>
             </DialogHeader>
 
             <Tabs value={mode} onValueChange={(v: string) => setMode(v as 'simple' | 'advanced')} className="w-full">

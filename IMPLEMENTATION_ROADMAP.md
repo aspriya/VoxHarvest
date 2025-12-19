@@ -167,3 +167,28 @@ This document outlines the phased approach to building VoiceForge Desktop, with 
 -   **Dashboard**: Project creation, "Recent Projects" loading.
 -   **GeneratorModal**: Simple vs Advanced generation modes, Form accessibility (`aria-label`, `htmlFor`).
 -   **ProjectPage**: Project loading, Script item rendering (virtualization), "Extend Script" flow, Dataset Export validation.
+
+## Phase 9: Dynamic Model Selection
+**Goal**: Allow users to optimize between cost, speed, and intelligence by selecting specific LLM versions.
+
+### 9.1 Backend (IPC)
+-   **New Handler**: `get-models(provider)`
+    -   **OpenAI**: Call `GET /v1/models`. Filter items where `id` starts with `gpt`.
+    -   **Gemini**: Use Google AI SDK to list available generative models.
+-   **Update Handler**: `generate-text(prompt, options)`
+    -   Add `modelId` to the `options` object.
+    -   Pass this `modelId` to the respective SDK call.
+
+### 9.2 Frontend (UI)
+-   **Store Update**: Add `selectedModel` to `useSettingsStore`.
+-   **Component**: Create `ModelSelector` component.
+    -   Dropdown (Shadcn Select).
+    -   "Refresh" button to trigger `get-models` IPC call.
+    -   Loading state while fetching.
+-   **Integration**:
+    -   Place `ModelSelector` in the header or shared area of `GeneratorModal` so it's visible in both Simple/Advanced tabs.
+    -   Alternatively, replicate in both tabs if header space is tight.
+
+### 9.3 Testing Strategy
+-   **Mocking**: Update `setup.ts` to mock `window.api.getModels()`.
+-   **Test Case**: Verify that changing the dropdown updates the store and that the `generate-text` call receives the correct `modelId`.

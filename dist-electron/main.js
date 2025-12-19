@@ -178,7 +178,27 @@ ipcMain.handle("save-project", async (_, project) => {
   await fs.writeFile(jsonPath, JSON.stringify(project, null, 2), "utf-8");
   return true;
 });
-ipcMain.handle("generate-text", async (_, prompt, count, systemPromptOverride) => {
+ipcMain.handle("get-models", async (_, provider) => {
+  const apiKey = provider === "openai" ? store.get("openaiApiKey") : store.get("geminiApiKey");
+  if (!apiKey) {
+    throw new Error(`${provider === "openai" ? "OpenAI" : "Gemini"} API Key is missing. Please check Settings.`);
+  }
+  try {
+    if (provider === "openai") {
+      const openai = new OpenAI({ apiKey });
+      const list = await openai.models.list();
+      return list.data.filter((m) => m.id.startsWith("gpt")).map((m) => m.id).sort();
+    } else if (provider === "gemini") {
+      return ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"];
+    }
+    return [];
+  } catch (e) {
+    console.error(`Failed to fetch models for ${provider}`, e);
+    const msg = (e == null ? void 0 : e.message) || "Unknown error";
+    throw new Error(`Failed to fetch models: ${msg}`);
+  }
+});
+ipcMain.handle("generate-text", async (_, prompt, count, systemPromptOverride, modelId) => {
   const settings = store.get("selectedProvider") ? store.store : { selectedProvider: "openai", openaiApiKey: store.get("openaiApiKey") };
   const provider = settings.selectedProvider || "openai";
   const defaultSystemPrompt = `You are a creative technical writer designed to generate distinct, high-quality, and pronounceable sentences for a Text-to-Speech dataset. 
@@ -188,7 +208,11 @@ ipcMain.handle("generate-text", async (_, prompt, count, systemPromptOverride) =
   const systemPrompt = systemPromptOverride || defaultSystemPrompt;
   console.log(`[Main] generate-text called. Override present? ${!!systemPromptOverride}`);
   console.log(`[Main] Final System Prompt used:`, systemPrompt);
-  console.log(`Generating ${count} sentences using ${provider} for topic: "${prompt}"`);
+  let selectedModel = modelId;
+  if (!selectedModel) {
+    selectedModel = provider === "openai" ? "gpt-3.5-turbo" : "gemini-1.5-flash";
+  }
+  console.log(`Generating ${count} sentences using ${provider} (Model: ${selectedModel}) for topic: "${prompt}"`);
   try {
     if (provider === "openai") {
       if (!settings.openaiApiKey) throw new Error("OpenAI API Key not configured");
@@ -200,7 +224,7 @@ ipcMain.handle("generate-text", async (_, prompt, count, systemPromptOverride) =
       console.log("[Main] OpenAI Messages Payload:", JSON.stringify(messages, null, 2));
       const completion = await openai.chat.completions.create({
         messages,
-        model: "gpt-3.5-turbo"
+        model: selectedModel
       });
       const content = completion.choices[0].message.content || "[]";
       const clean = content.replace(/```json/g, "").replace(/```/g, "").trim();
@@ -208,7 +232,7 @@ ipcMain.handle("generate-text", async (_, prompt, count, systemPromptOverride) =
     } else if (provider === "gemini") {
       if (!settings.geminiApiKey) throw new Error("Gemini API Key not configured");
       const genAI = new GoogleGenerativeAI(settings.geminiApiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: selectedModel });
       const result = await model.generateContent(systemPrompt);
       const response = await result.response;
       const text = response.text();

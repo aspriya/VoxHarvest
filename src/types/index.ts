@@ -56,6 +56,7 @@ export interface Settings {
     openaiApiKey?: string;
     geminiApiKey?: string;
     selectedProvider?: 'openai' | 'gemini';
+    selectedModel?: string; // Phase 9: Dynamic model
     theme?: 'light' | 'dark' | 'system';
     recentProjects?: RecentProject[];
     soundProfiles?: SoundProfile[];
@@ -76,7 +77,8 @@ export interface IpcApi {
     getSettings: () => Promise<Settings>;
     saveSettings: (settings: Settings) => Promise<void>;
     selectDirectory: () => Promise<string | undefined>;
-    generateText: (prompt: string, count: number, systemPromptOverride?: string) => Promise<string[]>;
+    generateText: (prompt: string, count: number, systemPromptOverride?: string, modelId?: string) => Promise<string[]>;
+    getModels: (provider: 'openai' | 'gemini') => Promise<string[]>;
     saveProject: (project: Project) => Promise<boolean>;
     readAudio: (path: string) => Promise<ArrayBuffer>;
     deleteFile: (path: string) => Promise<boolean>;

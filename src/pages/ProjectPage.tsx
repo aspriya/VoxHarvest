@@ -165,7 +165,12 @@ export default function ProjectPage() {
     } = useProjectStore()
     const { openaiApiKey, geminiApiKey } = useSettingsStore()
 
+    // Guard: AudioEngine hook initializes regardless, but we should return early if no project to avoid crashes
+    // However, hooks must be called unconditionally. So strict null check in return JSX is needed.
+    // Or we show loading BEFORE other logic.
+
     // Audio Engine
+
     // Audio Engine
     // Audio Engine
     const { state: audioState, loadAudio, play: playAudio, stop: stopAudio, setPitch, setEQ, analyser: playbackAnalyser } = useAudioEngine()
@@ -439,7 +444,8 @@ export default function ProjectPage() {
                             try {
                                 // Use the passed prompt (or override)
                                 // Our updated generateText accepts systemPromptOverride
-                                const sentences = await window.api.generateText(prompt, count, systemPromptOverride)
+                                const selectedModel = useSettingsStore.getState().selectedModel
+                                const sentences = await window.api.generateText(prompt, count, systemPromptOverride, selectedModel)
                                 const newItems: ProjectItem[] = sentences.map(text => ({
                                     id: generateUUID(),
                                     text,

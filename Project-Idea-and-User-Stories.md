@@ -336,3 +336,15 @@ When a user creates a project, the app creates a folder on their file system:
   * **Scenarios:**
       * *Purist:* Main=Sinhala, Secondary=None -> Formal grammar.
       * *Tech Reviewer:* Main=Sinhala, Secondary=English -> Code-switching enabled.
+
+### Module 7: Dynamic Model Selection
+* **US-7.1 (Fetch Models):**
+  * **UI:** A "Fetch Models" button (or auto-fetch on open) in the Generator Modal.
+  * **Logic:** App queries the current Provider (OpenAI/Gemini) for a list of available models (e.g., `gpt-4o`, `gemini-1.5-pro`).
+  * **Filtering:** Filter list to only include chat/text generation models (ignore embedding/audio models).
+* **US-7.2 (Model Selection):**
+  * **UI:** A dropdown menu to select the desired model.
+  * **Default:** Defaults to a sensible baseline (e.g., `gpt-4o-mini` or `gemini-flash`).
+  * **Persistence:** The selected model is saved in user settings so it persists across sessions.
+* **US-7.3 (Universal Access):**
+  * **Scope:** The model selection dropdown is available and synced in both "Simple" and "Advanced" generation tabs.
