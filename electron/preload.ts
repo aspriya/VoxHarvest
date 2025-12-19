@@ -16,6 +16,7 @@ const api = {
   saveProject: (project: Project) => ipcRenderer.invoke('save-project', project),
   readAudio: (path: string) => ipcRenderer.invoke('read-audio', path),
   deleteFile: (path: string) => ipcRenderer.invoke('delete-file', path),
+  importScriptFile: () => ipcRenderer.invoke('import-script-file'),
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

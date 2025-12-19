@@ -13,7 +13,8 @@ const api = {
   getModels: (provider) => electron.ipcRenderer.invoke("get-models", provider),
   saveProject: (project) => electron.ipcRenderer.invoke("save-project", project),
   readAudio: (path) => electron.ipcRenderer.invoke("read-audio", path),
-  deleteFile: (path) => electron.ipcRenderer.invoke("delete-file", path)
+  deleteFile: (path) => electron.ipcRenderer.invoke("delete-file", path),
+  importScriptFile: () => electron.ipcRenderer.invoke("import-script-file")
 };
 if (process.contextIsolated) {
   try {

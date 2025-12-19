@@ -192,3 +192,13 @@ This document outlines the phased approach to building VoiceForge Desktop, with 
 ### 9.3 Testing Strategy
 -   **Mocking**: Update `setup.ts` to mock `window.api.getModels()`.
 -   **Test Case**: Verify that changing the dropdown updates the store and that the `generate-text` call receives the correct `modelId`.
+
+## Phase 10: Import Sentences from TXT
+**Goal**: Allow users to bring their own scripts from external files.
+-   **Frontend**: Add "Import TXT" button to sidebar.
+-   **Logic**:
+    -   Open File Dialog -> Select `.txt`.
+    -   Read content -> Split by `\n` -> Filter empty.
+    -   Add to project as `pending` items.
+-   **IPC**: `read-file` (or similar) handler.
+

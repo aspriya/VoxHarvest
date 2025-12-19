@@ -85,6 +85,11 @@ When a user creates a project, the app creates a folder on their file system:
   * *Action:* Opens the Generator Modal again.
   * *Logic:* New sentences are appended to the existing list (not replacing it).
   * *Context:* (Advanced) The generator is aware of the previous context/mode to maintain consistency.
+* **US-2.4 (Import from TXT):** User clicks "Import TXT".
+  * *Action:* Opens a native file picker to select a `.txt` file.
+  * *Logic:* App reads the file from disk.
+  * *Parsing:* Each line in the file becomes a separate script item. Empty lines are ignored.
+  * *Result:* Items are appended to `project.json` with status `pending`.
 
 ### Module 3: The Recording Studio (Core UI)
 

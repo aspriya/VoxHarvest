@@ -93,3 +93,11 @@ vi.mock('tone', () => ({
     },
     // Add other used exports if necessary
 }))
+// Mock MediaDevices
+Object.defineProperty(global.navigator, 'mediaDevices', {
+    value: {
+        getUserMedia: vi.fn().mockResolvedValue({
+            getTracks: () => [{ stop: vi.fn() }] // Mock stream with stop method
+        })
+    }
+})

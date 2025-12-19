@@ -82,4 +82,5 @@ export interface IpcApi {
     saveProject: (project: Project) => Promise<boolean>;
     readAudio: (path: string) => Promise<ArrayBuffer>;
     deleteFile: (path: string) => Promise<boolean>;
+    importScriptFile: () => Promise<string | null>;
 }

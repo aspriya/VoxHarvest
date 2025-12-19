@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { EffectRack } from '@/components/EffectRack'
 import { Progress } from '@/components/ui/progress'
 import AudioVisualizer from '@/components/AudioVisualizer'
-import { ArrowLeft, Mic, Square, Play, SkipForward, SkipBack, Wand2, Loader2, Plus, Trash2, Edit2, PlayCircle } from 'lucide-react'
+import { ArrowLeft, Mic, Square, Play, SkipForward, SkipBack, Wand2, Loader2, Plus, Trash2, Edit2, PlayCircle, FileText } from 'lucide-react'
 import GeneratorModal from '@/components/script-gen/GeneratorModal'
 import { useToast } from "@/hooks/use-toast"
 // ...
@@ -424,13 +424,54 @@ export default function ProjectPage() {
             <aside className="w-80 border-r bg-card/30 flex flex-col hidden md:flex border-r-border">
                 <div className="p-4 border-b flex justify-between items-center text-xs tracking-wide uppercase text-muted-foreground font-semibold">
                     <span>Script ({items.length})</span>
-                    <Dialog open={isGenOpen} onOpenChange={setIsGenOpen}>
-                        <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6">
-                                <Plus className="h-4 w-4" />
-                            </Button>
-                        </DialogTrigger>
-                    </Dialog>
+                    <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={async () => {
+                            try {
+                                const content = await window.api.importScriptFile()
+                                if (content) {
+                                    const lines = content.split('\n')
+                                        .map(l => l.trim())
+                                        .filter(l => l.length > 0)
+
+                                    if (lines.length > 0) {
+                                        const newItems: ProjectItem[] = lines.map(text => ({
+                                            id: generateUUID(),
+                                            text,
+                                            status: 'pending',
+                                            duration: 0
+                                        }))
+                                        addItems(newItems)
+                                        toast({
+                                            title: "Import Successful",
+                                            description: `Added ${newItems.length} sentences from file.`
+                                        })
+                                    } else {
+                                        toast({
+                                            title: "Import Failed",
+                                            description: "File was empty or contained only whitespace.",
+                                            variant: "destructive"
+                                        })
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Import failed', e)
+                                toast({
+                                    title: "Import Error",
+                                    description: "Failed to read file.",
+                                    variant: "destructive"
+                                })
+                            }
+                        }} title="Import TXT">
+                            <FileText className="h-4 w-4" />
+                        </Button>
+                        <Dialog open={isGenOpen} onOpenChange={setIsGenOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" title="Generate with AI">
+                                    <Plus className="h-4 w-4" />
+                                </Button>
+                            </DialogTrigger>
+                        </Dialog>
+                    </div>
                 </div>
 
                 {/* Generator Modal */}

@@ -141,6 +141,20 @@ ipcMain.handle("select-directory", async () => {
   if (result.canceled) return void 0;
   return result.filePaths[0];
 });
+ipcMain.handle("import-script-file", async () => {
+  const result = await dialog.showOpenDialog(win, {
+    properties: ["openFile"],
+    filters: [{ name: "Text Files", extensions: ["txt"] }]
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  try {
+    const content = await fs.readFile(result.filePaths[0], "utf-8");
+    return content;
+  } catch (e) {
+    console.error("Failed to read script file", e);
+    throw e;
+  }
+});
 ipcMain.handle("get-settings", async () => {
   return store.store;
 });
