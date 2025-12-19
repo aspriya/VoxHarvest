@@ -167,7 +167,8 @@ export default function ProjectPage() {
 
     // Audio Engine
     // Audio Engine
-    const { state: audioState, loadAudio, play: playAudio, stop: stopAudio, setPitch, setEQ } = useAudioEngine()
+    // Audio Engine
+    const { state: audioState, loadAudio, play: playAudio, stop: stopAudio, setPitch, setEQ, analyser: playbackAnalyser } = useAudioEngine()
 
     const [stream, setStream] = useState<MediaStream | null>(null)
     const [isRecording, setIsRecording] = useState(false)
@@ -175,7 +176,7 @@ export default function ProjectPage() {
     const chunksRef = useRef<Blob[]>([])
     const isTempRecordingRef = useRef(false)
 
-    const listRef = useRef<List>(null)
+    const listRef = useRef<any>(null)
     const audioStateRef = useRef(audioState)
 
     useEffect(() => {
@@ -608,7 +609,12 @@ export default function ProjectPage() {
                     </Card>
 
                     <div className="w-full max-w-3xl">
-                        <AudioVisualizer stream={stream} isRecording={isRecording} isPlaying={audioState.isPlaying} />
+                        <AudioVisualizer
+                            stream={stream}
+                            isRecording={isRecording}
+                            isPlaying={audioState.isPlaying}
+                            playbackAnalyser={playbackAnalyser}
+                        />
                     </div>
 
                     <div className="flex items-center gap-8">

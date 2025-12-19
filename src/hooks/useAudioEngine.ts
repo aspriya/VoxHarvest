@@ -21,6 +21,10 @@ export const useAudioEngine = () => {
     })
 
     // Tone.js Nodes References
+    // State to hold the analyser instance so it triggers re-render when ready
+    const [analyserNode, setAnalyserNode] = useState<Tone.Analyser | null>(null)
+
+    // Tone.js Nodes References
     const player = useRef<Tone.Player | null>(null)
     const pitchShift = useRef<Tone.PitchShift | null>(null)
     const eq = useRef<Tone.EQ3 | null>(null)
@@ -29,12 +33,22 @@ export const useAudioEngine = () => {
     // Initialize Audio Graph
     useEffect(() => {
         const init = async () => {
-            // Create nodes
-            limiter.current = new Tone.Limiter(-1).toDestination()
-            eq.current = new Tone.EQ3(0, 0, 0).connect(limiter.current)
+            // Create temporary refs since we are inside effect
+            const limit = new Tone.Limiter(-1)
+            const ana = new Tone.Analyser("waveform", 2048)
+
+            // Connect chain
+            limit.connect(ana)
+            ana.toDestination()
+
+            // Update refs
+            limiter.current = limit
+            setAnalyserNode(ana)
+
+            eq.current = new Tone.EQ3(0, 0, 0).connect(limit)
             pitchShift.current = new Tone.PitchShift({
                 pitch: 0,
-                windowSize: 0.05, // Optimized for voice (0.03-0.1 range)
+                windowSize: 0.05,
                 delayTime: 0,
                 feedback: 0
             }).connect(eq.current)
@@ -52,6 +66,10 @@ export const useAudioEngine = () => {
             pitchShift.current?.dispose()
             eq.current?.dispose()
             limiter.current?.dispose()
+            setAnalyserNode(prev => {
+                prev?.dispose()
+                return null
+            })
         }
     }, [])
 
@@ -111,6 +129,7 @@ export const useAudioEngine = () => {
         play,
         stop,
         setPitch,
-        setEQ
+        setEQ,
+        analyser: analyserNode
     }
 }

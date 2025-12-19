@@ -1,48 +1,84 @@
 import { useEffect, useRef } from 'react'
 import { Card } from '@/components/ui/card'
+import * as Tone from 'tone'
 
 interface AudioVisualizerProps {
     stream: MediaStream | null
     isRecording: boolean
     isPlaying?: boolean
+    playbackAnalyser?: Tone.Analyser | null
 }
 
-export default function AudioVisualizer({ stream, isRecording, isPlaying = false }: AudioVisualizerProps) {
+export default function AudioVisualizer({ stream, isRecording, isPlaying = false, playbackAnalyser }: AudioVisualizerProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const animationRef = useRef<number>()
     const analyserRef = useRef<AnalyserNode>()
     const sourceRef = useRef<MediaStreamAudioSourceNode>()
 
     useEffect(() => {
-        if (!stream || !canvasRef.current) return
+        if (!canvasRef.current) return
 
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-        const analyser = audioCtx.createAnalyser()
-        analyser.fftSize = 2048
-        const source = audioCtx.createMediaStreamSource(stream)
+        let audioCtx: AudioContext | undefined
+        let analyser: AnalyserNode | undefined
+        let source: MediaStreamAudioSourceNode | undefined
 
-        source.connect(analyser)
-        analyserRef.current = analyser
-        sourceRef.current = source
+        // Setup for Microphone Stream
+        if (stream && !isPlaying) {
+            audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+            analyser = audioCtx.createAnalyser()
+            analyser.fftSize = 2048
+            source = audioCtx.createMediaStreamSource(stream)
+            source.connect(analyser)
+            analyserRef.current = analyser
+            sourceRef.current = source
+        }
 
         const canvas = canvasRef.current
         const canvasCtx = canvas.getContext('2d')
         if (!canvasCtx) return
 
-        const bufferLength = analyser.frequencyBinCount
+        const bufferLength = 2048 // Standard size
         const dataArray = new Uint8Array(bufferLength)
 
         const draw = () => {
             animationRef.current = requestAnimationFrame(draw)
 
-            analyser.getByteTimeDomainData(dataArray)
-
-            canvasCtx.fillStyle = 'rgb(20, 20, 25)' // Background color
+            canvasCtx.fillStyle = 'rgb(20, 20, 25)'
             canvasCtx.fillRect(0, 0, canvas.width, canvas.height)
-
             canvasCtx.lineWidth = 2
 
-            // Color Logic: Recording (Red) > Playing (Green) > Idle (Cyan)
+            // Visualization Source Logic
+            let buffer: Uint8Array | Float32Array = dataArray
+            let isFloat = false
+
+            if (isPlaying && playbackAnalyser) {
+                // Get data from Tone.js Analyser
+                // Tone.Analyser.getValue() returns Float32Array for 'waveform'
+                const val = playbackAnalyser.getValue()
+
+                // Debug log once per second roughly
+                if (Math.random() < 0.01) {
+                    console.log('[Visualizer] Playing. Analyser value sample:', val[0], 'Length:', val.length)
+                }
+
+                if (val instanceof Float32Array) {
+                    buffer = val
+                    isFloat = true
+                }
+            } else if (analyser) {
+                // Get data from Web Audio Analyser (Mic)
+                analyser.getByteTimeDomainData(dataArray)
+            } else {
+                // Idle / No Source
+                canvasCtx.strokeStyle = 'rgb(100, 100, 100)'
+                canvasCtx.beginPath()
+                canvasCtx.moveTo(0, canvas.height / 2)
+                canvasCtx.lineTo(canvas.width, canvas.height / 2)
+                canvasCtx.stroke()
+                return
+            }
+
+            // Set Color
             let strokeColor = 'rgb(0, 255, 200)' // Cyan (Idle)
             if (isRecording) {
                 strokeColor = 'rgb(255, 50, 50)' // Red
@@ -53,17 +89,25 @@ export default function AudioVisualizer({ stream, isRecording, isPlaying = false
             canvasCtx.strokeStyle = strokeColor
             canvasCtx.beginPath()
 
-            const sliceWidth = canvas.width / bufferLength
+            const sliceWidth = canvas.width / buffer.length
             let x = 0
 
-            for (let i = 0; i < bufferLength; i++) {
-                // If playing and no stream activity (flat line), maybe add some fake movement?
-                // For now, honestly visualizing the MIC input while playing audio is confusing unless the user is overdubbing.
-                // But without connecting to Tone.js destination, we can't visualize the output easily here.
-                // We'll stick to color change as requested.
+            for (let i = 0; i < buffer.length; i++) {
+                let v = 0
+                let y = 0
 
-                const v = dataArray[i] / 128.0
-                const y = v * canvas.height / 2
+                if (isFloat) {
+                    // Float32Array: range -1 to 1
+                    // Map to 0 to canvas.height
+                    // v = 0 -> y = height/2
+                    v = buffer[i] // raw value
+                    y = ((v + 1) / 2) * canvas.height
+                } else {
+                    // Uint8Array: range 0 to 255
+                    // 128 is zero crossing
+                    v = buffer[i] / 128.0
+                    y = v * canvas.height / 2
+                }
 
                 if (i === 0) {
                     canvasCtx.moveTo(x, y)
@@ -82,10 +126,10 @@ export default function AudioVisualizer({ stream, isRecording, isPlaying = false
 
         return () => {
             cancelAnimationFrame(animationRef.current!)
-            source.disconnect()
-            audioCtx.close()
+            if (source) source.disconnect()
+            if (audioCtx) audioCtx.close()
         }
-    }, [stream, isRecording, isPlaying])
+    }, [stream, isRecording, isPlaying, playbackAnalyser])
 
     // Border/Glow styles based on state
     let containerClass = "p-4 bg-zinc-950 border-zinc-800 transition-all duration-300"
