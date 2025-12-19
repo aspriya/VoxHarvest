@@ -88,8 +88,9 @@ export default function GeneratorModal({ isOpen, onClose, onGenerate, isGenerati
 
                 <TabsContent value="simple" className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label>Topic</Label>
+                        <Label htmlFor="simple-topic">Topic</Label>
                         <Input
+                            id="simple-topic"
                             value={domain}
                             onChange={(e) => setDomain(e.target.value)}
                             placeholder="e.g. Daily Conversation"
@@ -97,8 +98,9 @@ export default function GeneratorModal({ isOpen, onClose, onGenerate, isGenerati
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>Count</Label>
+                        <Label htmlFor="simple-count">Count</Label>
                         <Input
+                            id="simple-count"
                             type="number"
                             value={count}
                             onChange={(e) => setCount(e.target.value)}
@@ -164,8 +166,9 @@ export default function GeneratorModal({ isOpen, onClose, onGenerate, isGenerati
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Domain / Context</Label>
+                        <Label htmlFor="adv-domain">Domain / Context</Label>
                         <Input
+                            id="adv-domain"
                             value={domain}
                             onChange={(e) => setDomain(e.target.value)}
                             placeholder="e.g. Tech Review, News, casual"
@@ -174,8 +177,9 @@ export default function GeneratorModal({ isOpen, onClose, onGenerate, isGenerati
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Sentence Count</Label>
+                        <Label htmlFor="adv-count">Sentence Count</Label>
                         <Input
+                            id="adv-count"
                             type="number"
                             value={count}
                             onChange={(e) => setCount(e.target.value)}

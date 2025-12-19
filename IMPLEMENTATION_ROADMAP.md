@@ -146,3 +146,24 @@ This document outlines the phased approach to building VoiceForge Desktop, with 
 -   **Feature**: Ability to add more sentences to an existing project.
 -   **UI**: "Add More" button at the bottom of the virtualized list.
 -   **Behavior**: Appends generated items to the end of the `items` array.
+
+## Phase 8: Test Suite Implementation (Completed)
+**Goal**: Ensure core feature reliability and prevent regressions during future development.
+
+### 8.1 Testing Infrastructure
+-   **Framework**: `Vitest` + `JSDOM` for fast, headless unit/integration testing.
+-   **Utilities**: `React Testing Library` for component interaction, `user-event` for realistic simulation.
+-   **Environment**: Setup in `src/tests/setup.ts` to mock browser APIs absent in Node/JSDOM (`ResizeObserver`, `scrollIntoView`, `PointerEvent`).
+
+### 8.2 Mocking Strategy
+-   **Electron IPC**: Fully mocked `window.api` to simulate backend responses (File I/O, Settings, AI) without running Electon.
+-   **Audio Engine**:
+    -   **Web Audio API**: Manual class-based mock for `window.AudioContext` to support `AudioVisualizer`.
+    -   **Tone.js**: Module-level mock for `tone` to bypass complex audio graph initialization issues in test environments.
+    -   **MediaStream**: Mocked `navigator.mediaDevices.getUserMedia` and `MediaRecorder` for recording flows.
+
+### 8.3 Coverage Areas
+-   **Settings**: API key storage, Theme toggling, AI provider switching.
+-   **Dashboard**: Project creation, "Recent Projects" loading.
+-   **GeneratorModal**: Simple vs Advanced generation modes, Form accessibility (`aria-label`, `htmlFor`).
+-   **ProjectPage**: Project loading, Script item rendering (virtualization), "Extend Script" flow, Dataset Export validation.
