@@ -98,3 +98,30 @@ This document outlines the phased approach to building VoiceForge Desktop, with 
 ## Phase 5: Polish & Vibe
 -   **Visuals**: Glassmorphism, specific "Cyberpunk/Studio" aesthetic.
 -   **Testing**: E2E test for the "Record -> Save -> Export" critical path.
+
+## Phase 6: Temp Recordings Feature
+**Focus**: Flexibility for unscheduled voice capture.
+
+### 6.1 Data Structure Extensions
+-   **Schema**: Update `Project` interface to include `tempRecordings`.
+-   **Type Definition**:
+    ```typescript
+    interface TempRecording {
+        id: string;
+        timestamp: number;
+        duration: number;
+        settings: { pitch: number; eq: { low: number; mid: number; high: number } };
+    }
+    ```
+
+### 6.2 UI & Logic
+-   **Trigger**: Recording without an active script item creates a 'Temp Recording'.
+-   **Storage**: Files saved as `wavs/temp_{timestamp}.wav` (or similar).
+-   **Persistence**:
+    -   When recording stops, capture current AudioEngine settings (Pitch/EQ).
+    -   Save to `project.json` in `tempRecordings` array.
+-   **Playback**:
+    -   Playing a temp recording *automatically* sets the Audio Engine knobs to the saved values.
+-   **Management**:
+    -   Display separate list for Temp Recordings.
+    -   Allow permanent deletion (File + Metadata).

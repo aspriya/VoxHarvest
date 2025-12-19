@@ -11,7 +11,8 @@ const api = {
   selectDirectory: () => electron.ipcRenderer.invoke("select-directory"),
   generateText: (prompt, count) => electron.ipcRenderer.invoke("generate-text", prompt, count),
   saveProject: (project) => electron.ipcRenderer.invoke("save-project", project),
-  readAudio: (path) => electron.ipcRenderer.invoke("read-audio", path)
+  readAudio: (path) => electron.ipcRenderer.invoke("read-audio", path),
+  deleteFile: (path) => electron.ipcRenderer.invoke("delete-file", path)
 };
 if (process.contextIsolated) {
   try {

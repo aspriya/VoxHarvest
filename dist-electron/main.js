@@ -59,6 +59,15 @@ ipcMain.handle("save-processed-audio", async (_, buffer, filename, projectPath) 
     throw e;
   }
 });
+ipcMain.handle("delete-file", async (_, filePath) => {
+  try {
+    await fs.unlink(filePath);
+    return true;
+  } catch (e) {
+    console.error("Delete file failed", e);
+    return false;
+  }
+});
 ipcMain.handle("export-dataset", async (_, projectPath, items) => {
   try {
     const result = await dialog.showSaveDialog({

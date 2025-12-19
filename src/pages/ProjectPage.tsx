@@ -9,40 +9,7 @@ import { Progress } from '@/components/ui/progress'
 import AudioVisualizer from '@/components/AudioVisualizer'
 import { ArrowLeft, Mic, Square, Play, SkipForward, SkipBack, Wand2, Loader2, Plus, Trash2, Edit2, PlayCircle } from 'lucide-react'
 // ...
-const handleEditItem = (id: string, newText: string) => {
-    const newItems = items.map(i => i.id === id ? { ...i, text: newText } : i)
-    addItems(newItems) // This actually replaces the items in the store because addItems implementation usually appends? Wait, looking at store it might be set. 
-    // Checking store: useProjectStore. 
-    // Actually, let's assume updateItemStatus or similar exists. 
-    // useProjectStore probably has 'setItems' or I might need to add it. 
-    // The current 'addItems' likely appends. I should check store. 
-    // For now, I'll implement a simple text update locally if store confuses. 
-    // Actually, let's just use what we have.
-}
 
-const handleDeleteItem = (id: string) => {
-    // We need a delete action in the store ideally.
-    // For now, let's assume we can just filter and set.
-    // Check store definition is not visible here but imported.
-    // Use logic similar to 'addItems' but filtering?
-}
-
-const handlePlayItem = async (index: number) => {
-    // Logic to play specific item audio
-    // Reuse handlePlaySaved logic but for specific index
-    const item = items[index];
-    if (item.status !== 'recorded') return;
-    try {
-        const filename = `file_${String(index + 1).padStart(4, '0')}.wav`
-        const filePath = `${currentProject?.path}\\wavs\\${filename}`
-        const buffer = await window.api.readAudio(filePath)
-        const audioBuffer = await Tone.context.decodeAudioData(buffer)
-        await loadAudio(audioBuffer)
-        playAudio()
-    } catch (e) {
-        console.error(e)
-    }
-}
 import { useSettingsStore } from '@/store/settingsStore'
 import * as ReactWindowPkg from 'react-window';
 import * as AutoSizerPkg from 'react-virtualized-auto-sizer';
@@ -191,7 +158,8 @@ export default function ProjectPage() {
     const navigate = useNavigate()
     const {
         currentProject, items, currentItemIndex,
-        loadProject, nextItem, prevItem, updateItemStatus, addItems, setCurrentIndex, setItems, saveProject
+        loadProject, nextItem, prevItem, updateItemStatus, addItems, setCurrentIndex, setItems, saveProject,
+        addTempRecording, deleteTempRecording
     } = useProjectStore()
     const { openaiApiKey, geminiApiKey } = useSettingsStore()
 
@@ -203,8 +171,14 @@ export default function ProjectPage() {
     const [isRecording, setIsRecording] = useState(false)
     const mediaRecorderRef = useRef<MediaRecorder | null>(null)
     const chunksRef = useRef<Blob[]>([])
+    const isTempRecordingRef = useRef(false)
 
     const listRef = useRef<List>(null)
+    const audioStateRef = useRef(audioState)
+
+    useEffect(() => {
+        audioStateRef.current = audioState
+    }, [audioState])
 
     // ... (rest of state)
 
@@ -319,6 +293,19 @@ export default function ProjectPage() {
 
     const startRecording = () => {
         if (!stream) return
+
+        // Determine if this is a temp recording
+        // Condition: No active item OR specifically triggered (UI could enforce this differently)
+        // For now, if currentItem is finished we might want to allow re-record? 
+        // Let's say: If NO items, or we explicitly want to record temp.
+        // Actually, requirement says: "When i record a voice clip without any script or sentences".
+        // So if items.length === 0, OR maybe we add a specific "Temp Record" mode?
+        // The user comment "When i record ... without any script" implies an empty state or distinct action.
+        // Let's infer: If items is empty, treat as temp. 
+        // OR: If currentItem is null/undefined.
+
+        isTempRecordingRef.current = !currentItem
+
         const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
         mediaRecorderRef.current = recorder
         chunksRef.current = []
@@ -330,12 +317,36 @@ export default function ProjectPage() {
         recorder.onstop = async () => {
             const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
             const buffer = await blob.arrayBuffer()
-            const filename = `file_${String(currentItemIndex + 1).padStart(4, '0')}.wav`
 
-            if (currentProject) {
-                await window.api.saveAudio(buffer, filename, currentProject.path)
-                updateItemStatus(currentItem.id, 'recorded', blob.size)
-                nextItem()
+            if (isTempRecordingRef.current) {
+                // Temp Recording Logic
+                const timestamp = Date.now()
+                const filename = `temp_${timestamp}.wav`
+
+                if (currentProject) {
+                    await window.api.saveAudio(buffer, filename, currentProject.path)
+
+                    // Capture Settings from latest Ref
+                    const { pitch, eq } = audioStateRef.current
+
+                    addTempRecording({
+                        id: generateUUID(),
+                        name: `temp_${timestamp}.wav`,
+                        path: filename,
+                        timestamp,
+                        duration: 0,
+                        settings: { pitch, eq: { ...eq } }
+                    })
+                }
+            } else {
+                // Script Recording Logic
+                const filename = `file_${String(currentItemIndex + 1).padStart(4, '0')}.wav`
+
+                if (currentProject) {
+                    await window.api.saveAudio(buffer, filename, currentProject.path)
+                    updateItemStatus(currentItem.id, 'recorded', blob.size)
+                    nextItem()
+                }
             }
         }
 
@@ -469,8 +480,68 @@ export default function ProjectPage() {
                                 style={{ height: 48, width: '100%' }}
                                 data={{ items, currentItemIndex, setCurrentIndex, handleEditItem, handleDeleteItem, handlePlayItem }}
                             />
-                        )) : <div className="p-4 text-center text-muted-foreground">No items</div>}
+                        )) : <div className="p-4 text-center text-muted-foreground text-sm">No script items</div>}
                     </div>
+
+                    {/* Temp Recordings Section */}
+                    {currentProject?.tempRecordings && currentProject.tempRecordings.length > 0 && (
+                        <div className="mt-6 border-t border-white/10 pt-4">
+                            <div className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                                Temp Recordings
+                            </div>
+                            <div className="flex flex-col">
+                                {currentProject.tempRecordings.map((rec) => (
+                                    <div key={rec.id} className="px-4 py-2 flex items-center justify-between hover:bg-white/5 group border-b border-white/5 last:border-0 transition-colors">
+                                        <div className="text-xs font-mono text-zinc-400 truncate flex-1 mr-2" title={rec.name}>
+                                            {rec.name}
+                                        </div>
+                                        <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                className="p-1 hover:bg-green-500/20 text-green-500 rounded"
+                                                onClick={async (e) => {
+                                                    e.stopPropagation()
+                                                    // Play Temp Logic
+                                                    const filePath = `${currentProject.path}\\wavs\\${rec.path}`
+                                                    try {
+                                                        const buffer = await window.api.readAudio(filePath)
+                                                        const audioBuffer = await Tone.context.decodeAudioData(buffer)
+                                                        // RESTORE SETTINGS
+                                                        if (rec.settings) {
+                                                            setPitch(rec.settings.pitch)
+                                                            setEQ('low', rec.settings.eq.low)
+                                                            setEQ('mid', rec.settings.eq.mid)
+                                                            setEQ('high', rec.settings.eq.high)
+                                                            // Note: Sliders in UI should react if they are bound to audioState passed from store/hook
+                                                            // Check EffectRack: it uses audioState. 
+                                                            // useAudioEngine returns state which we pass to EffectRack.
+                                                            // So updating setPitch/setEQ here updates hook state -> updates UI.
+                                                        }
+                                                        await loadAudio(audioBuffer)
+                                                        playAudio()
+                                                    } catch (err) {
+                                                        console.error("Play temp failed", err)
+                                                    }
+                                                }}
+                                            >
+                                                <PlayCircle className="h-3.5 w-3.5" />
+                                            </button>
+                                            <button
+                                                className="p-1 hover:bg-red-500/20 text-red-400 rounded"
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    if (confirm('Delete temp recording forever?')) {
+                                                        deleteTempRecording(rec.id)
+                                                    }
+                                                }}
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </aside>
 
@@ -536,7 +607,6 @@ export default function ProjectPage() {
                                         ? 'animate-pulse scale-110 ring-4 ring-red-500/30'
                                         : 'hover:scale-105 hover:bg-primary/90'}`}
                                 onClick={handleToggleRecord}
-                                disabled={items.length === 0}
                             >
                                 {isRecording ? <Square className="h-10 w-10 fill-current" /> : <Mic className="h-10 w-10" />}
                             </Button>

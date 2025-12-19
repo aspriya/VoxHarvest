@@ -7,6 +7,19 @@ export interface Project {
     targetSampleRate: number;
     currentIndex: number;
     items: ProjectItem[];
+    tempRecordings?: TempRecording[];
+}
+
+export interface TempRecording {
+    id: string;
+    name: string;
+    path: string;
+    timestamp: number;
+    duration: number;
+    settings: {
+        pitch: number;
+        eq: { low: number; mid: number; high: number };
+    };
 }
 
 export interface ProjectItem {
@@ -58,4 +71,5 @@ export interface IpcApi {
     generateText: (prompt: string, count: number) => Promise<string[]>;
     saveProject: (project: Project) => Promise<boolean>;
     readAudio: (path: string) => Promise<ArrayBuffer>;
+    deleteFile: (path: string) => Promise<boolean>;
 }

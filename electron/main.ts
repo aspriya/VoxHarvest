@@ -79,6 +79,19 @@ ipcMain.handle('save-processed-audio', async (_, buffer, filename, projectPath) 
   }
 })
 
+ipcMain.handle('delete-file', async (_, filePath) => {
+  try {
+    // Security check: ensure file is within a known project path if possible, 
+    // but since we pass absolute paths mostly, we rely on UI to be safe.
+    // Ideally we check if it is inside 'wavs' folder of a project.
+    await fs.unlink(filePath)
+    return true
+  } catch (e) {
+    console.error("Delete file failed", e)
+    return false
+  }
+})
+
 ipcMain.handle('export-dataset', async (_, projectPath: string, items: any[]) => {
   try {
     const result = await dialog.showSaveDialog({

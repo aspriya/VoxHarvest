@@ -14,6 +14,7 @@ const api = {
   generateText: (prompt: string, count: number) => ipcRenderer.invoke('generate-text', prompt, count),
   saveProject: (project: Project) => ipcRenderer.invoke('save-project', project),
   readAudio: (path: string) => ipcRenderer.invoke('read-audio', path),
+  deleteFile: (path: string) => ipcRenderer.invoke('delete-file', path),
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
