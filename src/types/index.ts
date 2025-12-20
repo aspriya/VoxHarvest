@@ -83,4 +83,6 @@ export interface IpcApi {
     readAudio: (path: string) => Promise<ArrayBuffer>;
     deleteFile: (path: string) => Promise<boolean>;
     importScriptFile: () => Promise<string | null>;
+    trimAudio: (filePath: string, start: number, end: number, applyDenoise: boolean) => Promise<boolean>;
+    previewAudio: (filePath: string, start: number, end: number, applyDenoise: boolean) => Promise<ArrayBuffer>;
 }

@@ -14,7 +14,9 @@ const api = {
   saveProject: (project) => electron.ipcRenderer.invoke("save-project", project),
   readAudio: (path) => electron.ipcRenderer.invoke("read-audio", path),
   deleteFile: (path) => electron.ipcRenderer.invoke("delete-file", path),
-  importScriptFile: () => electron.ipcRenderer.invoke("import-script-file")
+  importScriptFile: () => electron.ipcRenderer.invoke("import-script-file"),
+  trimAudio: (filePath, start, end, applyDenoise) => electron.ipcRenderer.invoke("trim-audio", filePath, start, end, applyDenoise),
+  previewAudio: (filePath, start, end, applyDenoise) => electron.ipcRenderer.invoke("preview-audio", filePath, start, end, applyDenoise)
 };
 if (process.contextIsolated) {
   try {

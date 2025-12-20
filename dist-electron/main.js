@@ -46,6 +46,62 @@ ipcMain.handle("save-audio", async (_, buffer, filename, projectPath) => {
     throw e;
   }
 });
+ipcMain.handle("trim-audio", async (_, filePath, start, end, applyDenoise) => {
+  const tempEdited = path.join(app.getPath("temp"), `edited_${randomUUID()}.wav`);
+  try {
+    return new Promise((resolve, reject) => {
+      let command = ffmpeg(filePath).inputOptions([`-ss ${start}`, `-to ${end}`]).toFormat("wav").audioCodec("pcm_s16le").audioChannels(1).audioFrequency(22050);
+      const filters = [];
+      if (applyDenoise) {
+        filters.push("highpass=f=80");
+        filters.push("afftdn=nr=10:nf=-25:nt=w");
+      }
+      if (filters.length > 0) {
+        command = command.audioFilters(filters);
+      }
+      command.on("end", async () => {
+        try {
+          await fs.copyFile(tempEdited, filePath);
+          await fs.unlink(tempEdited);
+          resolve(true);
+        } catch (err) {
+          console.error("Error replacing file:", err);
+          reject(err);
+        }
+      }).on("error", (err) => {
+        console.error("FFmpeg trim error:", err);
+        reject(err);
+      }).save(tempEdited);
+    });
+  } catch (e) {
+    console.error("Trim audio failed", e);
+    throw e;
+  }
+});
+ipcMain.handle("preview-audio", async (_, filePath, start, end, applyDenoise) => {
+  const tempPreview = path.join(app.getPath("temp"), `preview_${randomUUID()}.wav`);
+  try {
+    await new Promise((resolve, reject) => {
+      let command = ffmpeg(filePath).inputOptions([`-ss ${start}`, `-to ${end}`]).toFormat("wav").audioCodec("pcm_s16le").audioChannels(1).audioFrequency(22050);
+      const filters = [];
+      if (applyDenoise) {
+        filters.push("highpass=f=80");
+        filters.push("afftdn=nr=10:nf=-25:nt=w");
+      }
+      if (filters.length > 0) {
+        command = command.audioFilters(filters);
+      }
+      command.on("end", resolve).on("error", reject).save(tempPreview);
+    });
+    const buffer = await fs.readFile(tempPreview);
+    await fs.unlink(tempPreview).catch(() => {
+    });
+    return buffer.buffer;
+  } catch (e) {
+    console.error("Preview audio failed", e);
+    throw e;
+  }
+});
 ipcMain.handle("save-processed-audio", async (_, buffer, filename, projectPath) => {
   const buf = Buffer.from(buffer);
   const processedDir = path.join(projectPath, "wavs_processed");

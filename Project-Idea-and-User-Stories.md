@@ -353,3 +353,27 @@ When a user creates a project, the app creates a folder on their file system:
   * **Persistence:** The selected model is saved in user settings so it persists across sessions.
 * **US-7.3 (Universal Access):**
   * **Scope:** The model selection dropdown is available and synced in both "Simple" and "Advanced" generation tabs.
+
+### Module 8: Advanced Audio Editor (Phase 11) - (Implemented)
+* **US-8.1 (Waveform Editor):**
+  * **Trigger:** "Edit Audio" button on any recorded item (replacing or next to the "Play" button).
+  * **UI:** A dedicated modal or expanded view showing the full high-resolution waveform of the recorded clip.
+  * **Interaction:**
+      *   **Trimming:** Draggable handles at the start and end of the waveform to visually select the active audio region.
+      *   **Preview:** "Play Region" button that plays only the selected trimmed region.
+      *   **Visualization:** Includes a Time Ruler (Timeline) for precise seeking and a Grid background for better visual reference.
+* **US-8.2 (Basic Noise Removal):**
+  *   **UI:** A "Reduce Noise" toggle or low/med/high slider in the editor.
+  *   **Logic:** Applies a reliable `ffmpeg` filter chain (`highpass=f=80`, `afftdn`) during the save process.
+  * **Goal:** Remove room rumble or steady background hiss without complicating the interface with technical parameters.
+* **US-8.3 (Destructive Save):**
+  * **Action:** User clicks "Save & Apply".
+  * **Backend Process:**
+      1.  App sends cut timestamps (Start/End) and Effect flags to Main Process.
+      2.  `ffmpeg` processes the source WAV -> creates temporary file -> overwrites original source.
+      3.  Updates the `duration` field in `project.json`.
+  * **UX:** The UI updates immediately to show the new shorter clip.
+* **US-8.4 (Denoise Preview):**
+  * **Requirement:** Users must be able to hear the effect of noise reduction *before* committing to a destructive save.
+  * **Interaction:** A "Preview Effect" button in the Editor.
+  * **System:** Backend generates a temporary processed clip of the selected region and plays it back to the user without overwriting the original file.

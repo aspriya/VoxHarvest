@@ -25,6 +25,8 @@ Object.defineProperty(window, 'api', {
         getRecentProjects: vi.fn().mockResolvedValue([]),
         addToRecentProjects: vi.fn().mockResolvedValue(true),
         removeFromRecentProjects: vi.fn().mockResolvedValue(true),
+        trimAudio: vi.fn().mockResolvedValue(true),
+        previewAudio: vi.fn().mockResolvedValue(new ArrayBuffer(100)),
 
         // AI
         generateText: vi.fn().mockResolvedValue(['Mock sentence 1.', 'Mock sentence 2.']),
@@ -99,5 +101,52 @@ Object.defineProperty(global.navigator, 'mediaDevices', {
         getUserMedia: vi.fn().mockResolvedValue({
             getTracks: () => [{ stop: vi.fn() }] // Mock stream with stop method
         })
+    },
+    configurable: true
+})
+
+// Mock WaveSurfer Globally
+vi.mock('wavesurfer.js', () => {
+    return {
+        default: {
+            create: vi.fn().mockReturnValue({
+                on: vi.fn((event, callback) => {
+                    if (event === 'ready') {
+                        setTimeout(callback, 0)
+                    }
+                }),
+                destroy: vi.fn(),
+                load: vi.fn(),
+                play: vi.fn(),
+                pause: vi.fn(),
+                getDuration: vi.fn().mockReturnValue(10),
+                registerPlugin: vi.fn(),
+                setOptions: vi.fn(),
+                zoom: vi.fn(),
+            }),
+        }
+    }
+})
+
+vi.mock('wavesurfer.js/dist/plugins/regions.esm.js', () => {
+    return {
+        default: {
+            create: vi.fn().mockReturnValue({
+                on: vi.fn(),
+                clearRegions: vi.fn(),
+                addRegion: vi.fn(),
+                getRegions: vi.fn().mockReturnValue([]),
+            }),
+        }
+    }
+})
+
+vi.mock('wavesurfer.js/dist/plugins/timeline.esm.js', () => {
+    return {
+        default: {
+            create: vi.fn().mockReturnValue({
+                on: vi.fn(),
+            }),
+        }
     }
 })

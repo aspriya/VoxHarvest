@@ -200,5 +200,44 @@ This document outlines the phased approach to building VoiceForge Desktop, with 
     -   Open File Dialog -> Select `.txt`.
     -   Read content -> Split by `\n` -> Filter empty.
     -   Add to project as `pending` items.
--   **IPC**: `read-file` (or similar) handler.
+## Phase 11: Advanced Audio Editor (Completed)
+**Goal:** Empower users to fix recording mistakes (dead air, background noise) without re-recording or leaving the app.
+
+### 11.1 Frontend Architecture
+- [x] **Library:** `wavesurfer.js` (latest) + Regions Plugin.
+- [x] **Component:** `AudioEditorModal`.
+    - [x] **Props:** `isOpen`, `onClose`, `audioUrl`, `onSave`.
+    - [x] **State:** Use local React state for `isPlaying`, `regionStart`, `regionEnd`, `noiseReductionEnabled`.
+- [x] **UX Pattern:**
+    - [x] Modal opens over the main studio.
+    - [x] Waveform loads asynchronously.
+    - [x] "Play Region" loops the selected area for fine-tuning.
+    - [x] "Save" button shows a spinner (awaiting IPC).
+
+### 11.2 Backend Implementation (FFmpeg)
+- [x] **IPC Handler:** `trim-audio(filePath, start, end, applyDenoise)`
+- [x] **Logic:**
+    1.  **Construct Filter Complex:**
+        - [x] Base: `-ss {start} -to {end}` (Input seeking is faster/safer).
+        - [x] Denoise: If `applyDenoise` is true, add `-af "highpass=f=80, afftdn=nr=10:nf=-25:nt=w"`.
+        - [x] *Note:* `afftdn` (FFT Denoise) is effective for white noise but cpu intensive. Fallback to `lowpass` if needed, but modern CPUs handle it fine.
+    2.  **Execution:**
+        - [x] Run `ffmpeg` outputting to `file_XXXX_edited.wav`.
+        - [x] On success, un-link (delete) original `file_XXXX.wav`.
+        - [x] Rename `file_XXXX_edited.wav` to `file_XXXX.wav`.
+    3.  **Return:** New file size/duration to Renderer.
+
+### 11.3 Cache Handling
+- [x] **Challenge:** Electron/Chrome caches audio files by URL. Replacing a file on disk doesn't auto-update the `<audio>` tag or `Tone.Player`.
+- [x] **Solution:** When the Editor saves, return a "version timestamp" (e.g., `Date.now()`). The Renderer must append `?v={timestamp}` to the audio URL when re-loading the player.
+
+### 11.4 Denoise Preview Strategy
+- [x] **Goal:** WYHIWYG (What You Hear Is What You Get) without destruction.
+- [x] **Workflow:**
+    1.  User clicks "Preview Effect".
+    2.  `preview-audio` IPC called with active region + filter settings.
+    3.  Backend creates `temp_preview_UUID.wav` (trimmed & filtered).
+    4.  Backend returns `ArrayBuffer`.
+    5.  Frontend plays buffer using `Tone.context.decodeAudioData`.
+    6.  Temp file is deleted immediately after reading.
 

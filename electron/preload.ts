@@ -17,6 +17,8 @@ const api = {
   readAudio: (path: string) => ipcRenderer.invoke('read-audio', path),
   deleteFile: (path: string) => ipcRenderer.invoke('delete-file', path),
   importScriptFile: () => ipcRenderer.invoke('import-script-file'),
+  trimAudio: (filePath: string, start: number, end: number, applyDenoise: boolean) => ipcRenderer.invoke('trim-audio', filePath, start, end, applyDenoise),
+  previewAudio: (filePath: string, start: number, end: number, applyDenoise: boolean) => ipcRenderer.invoke('preview-audio', filePath, start, end, applyDenoise),
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

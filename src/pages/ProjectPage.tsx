@@ -7,8 +7,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { EffectRack } from '@/components/EffectRack'
 import { Progress } from '@/components/ui/progress'
 import AudioVisualizer from '@/components/AudioVisualizer'
-import { ArrowLeft, Mic, Square, Play, SkipForward, SkipBack, Wand2, Loader2, Plus, Trash2, Edit2, PlayCircle, FileText } from 'lucide-react'
+import { ArrowLeft, Mic, Square, Play, SkipForward, SkipBack, Wand2, Loader2, Plus, Trash2, Edit2, PlayCircle, FileText, Scissors } from 'lucide-react'
 import GeneratorModal from '@/components/script-gen/GeneratorModal'
+import { AudioEditorModal } from '@/components/AudioEditorModal'
 import { useToast } from "@/hooks/use-toast"
 // ...
 
@@ -51,7 +52,7 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
     // Safety check
     if (!data || !data.items) return null;
 
-    const { items, currentItemIndex, setCurrentIndex, handleEditItem, handleDeleteItem, handlePlayItem } = data
+    const { items, currentItemIndex, setCurrentIndex, handleEditItem, handleDeleteItem, handlePlayItem, handleOpenEditor } = data
     const item = items[index]
     if (!item) return null;
 
@@ -110,6 +111,17 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
                             title="Play"
                         >
                             <PlayCircle className="h-3.5 w-3.5" />
+                        </button>
+                    )}
+
+                    {/* Audio Edit Button */}
+                    {item.status === 'recorded' && !isEditing && (
+                        <button
+                            className="p-1 hover:bg-purple-500/20 text-muted-foreground hover:text-purple-400 rounded transition"
+                            onClick={(e) => handleOpenEditor(index, e)}
+                            title="Edit Audio (Trim/Denoise)"
+                        >
+                            <Scissors className="h-3.5 w-3.5" />
                         </button>
                     )}
 
@@ -271,6 +283,82 @@ export default function ProjectPage() {
     const [isGenerating, setIsGenerating] = useState(false)
     const [topic, setTopic] = useState("") // Keeping for fallback or removing if unused
     const [count, setCount] = useState(5)
+
+    // Editor State
+    const [editorOpen, setEditorOpen] = useState(false)
+    const [editorAudioUrl, setEditorAudioUrl] = useState<string | null>(null)
+    const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null)
+
+    const handleOpenEditor = async (index: number, e: React.MouseEvent) => {
+        e.stopPropagation()
+        const item = items[index]
+        if (item.status !== 'recorded') return
+
+        const filename = `file_${String(index + 1).padStart(4, '0')}.wav`
+        const filePath = `${currentProject?.path}\\wavs\\${filename}`
+
+        try {
+            // Read file to create Blob URL for WaveSurfer
+            const buffer = await window.api.readAudio(filePath)
+            // Use Blob
+            const blob = new Blob([buffer], { type: 'audio/wav' })
+            const url = URL.createObjectURL(blob)
+            setEditorAudioUrl(url)
+            setEditingItemIndex(index)
+            setEditorOpen(true)
+        } catch (err) {
+            console.error("Failed to open editor", err)
+            toast({ title: "Error", description: "Could not load audio for editing", variant: "destructive" })
+        }
+    }
+
+    const handleSaveEditedAudio = async (start: number, end: number, applyDenoise: boolean) => {
+        if (editingItemIndex === null || !currentProject) return
+
+        const index = editingItemIndex
+        const filename = `file_${String(index + 1).padStart(4, '0')}.wav`
+        const filePath = `${currentProject.path}\\wavs\\${filename}`
+
+        try {
+            await window.api.trimAudio(filePath, start, end, applyDenoise)
+
+            // Clean up old blob
+            if (editorAudioUrl) URL.revokeObjectURL(editorAudioUrl)
+
+            toast({ title: "Success", description: "Audio edited successfully." })
+
+            // Should we update the item duration in the store? 
+            // Ideally yes.
+            // window.api.readAudio again to check size/duration?
+            // Or just trust it.
+
+            setEditorOpen(false)
+            setEditorAudioUrl(null)
+            setEditingItemIndex(null)
+        } catch (e) {
+            console.error("Edit failed", e)
+            toast({ title: "Error", description: "Failed to save edits.", variant: "destructive" })
+        }
+    }
+
+    const handlePreviewAudio = async (start: number, end: number, applyDenoise: boolean) => {
+        if (editingItemIndex === null || !currentProject) return
+
+        const index = editingItemIndex
+        const filename = `file_${String(index + 1).padStart(4, '0')}.wav`
+        const filePath = `${currentProject.path}\\wavs\\${filename}`
+
+        try {
+            const buffer = await window.api.previewAudio(filePath, start, end, applyDenoise)
+            // Play using AudioEngine
+            const audioBuffer = await Tone.context.decodeAudioData(buffer)
+            await loadAudio(audioBuffer)
+            playAudio()
+        } catch (e) {
+            console.error("Preview failed", e)
+            toast({ title: "Error", description: "Failed to preview audio.", variant: "destructive" })
+        }
+    }
 
     const { toast } = useToast()
 
@@ -510,6 +598,20 @@ export default function ProjectPage() {
                     />
                 </Dialog>
 
+                <AudioEditorModal
+                    isOpen={editorOpen}
+                    onClose={() => {
+                        setEditorOpen(false)
+                        if (editorAudioUrl) URL.revokeObjectURL(editorAudioUrl)
+                        setEditorAudioUrl(null)
+                        setEditingItemIndex(null)
+                    }}
+                    audioUrl={editorAudioUrl}
+                    text={editingItemIndex !== null ? items[editingItemIndex]?.text : undefined}
+                    onSave={handleSaveEditedAudio}
+                    onPreview={handlePreviewAudio}
+                />
+
                 <div className="flex-1 overflow-auto">
                     {/* fallback logging */}
                     {/*
@@ -539,7 +641,7 @@ export default function ProjectPage() {
                                 key={index}
                                 index={index}
                                 style={{ height: 48, width: '100%' }}
-                                data={{ items, currentItemIndex, setCurrentIndex, handleEditItem, handleDeleteItem, handlePlayItem }}
+                                data={{ items, currentItemIndex, setCurrentIndex, handleEditItem, handleDeleteItem, handlePlayItem, handleOpenEditor }}
                             />
                         )) : <div className="p-4 text-center text-muted-foreground text-sm">No script items</div>}
 
