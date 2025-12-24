@@ -7,10 +7,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { EffectRack } from '@/components/EffectRack'
 import { Progress } from '@/components/ui/progress'
 import AudioVisualizer from '@/components/AudioVisualizer'
-import { ArrowLeft, Mic, Square, Play, SkipForward, SkipBack, Wand2, Loader2, Plus, Trash2, Edit2, PlayCircle, FileText, Scissors } from 'lucide-react'
+import { ArrowLeft, Mic, Square, Play, SkipForward, SkipBack, Wand2, Loader2, Plus, Trash2, Edit2, PlayCircle, FileText, Scissors, Clock, RefreshCw } from 'lucide-react'
 import GeneratorModal from '@/components/script-gen/GeneratorModal'
 import { AudioEditorModal } from '@/components/AudioEditorModal'
 import { useToast } from "@/hooks/use-toast"
+import { formatDuration, calculateTotalDuration } from '@/utils/timeFormat'
 // ...
 
 import { useSettingsStore } from '@/store/settingsStore'
@@ -23,7 +24,6 @@ const rwAny = ReactWindowPkg as any;
 const rwDefault = rwAny.default || rwAny;
 const List = rwDefault.FixedSizeList || rwDefault.List || rwAny.FixedSizeList || rwAny.List;
 
-const AutoSizer = (AutoSizerPkg as any).default || AutoSizerPkg;
 import {
     Dialog,
     DialogContent,
@@ -281,10 +281,6 @@ export default function ProjectPage() {
     const [isGenOpen, setIsGenOpen] = useState(false)
     const [isSettingsOpen, setIsSettingsOpen] = useState(false)
     const [isGenerating, setIsGenerating] = useState(false)
-    const [topic, setTopic] = useState("") // Keeping for fallback or removing if unused
-    const [count, setCount] = useState(5)
-
-    // Editor State
     const [editorOpen, setEditorOpen] = useState(false)
     const [editorAudioUrl, setEditorAudioUrl] = useState<string | null>(null)
     const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null)
@@ -360,6 +356,58 @@ export default function ProjectPage() {
         }
     }
 
+    const handleRecalculateDurations = async () => {
+        if (!currentProject || !items.length) return
+
+        if (!confirm('This will verify all files and fix the duration display. It may take a moment. Continue?')) return
+
+        setIsGenerating(true) // Reuse loading state or create new one
+        toast({ title: "Recalculating...", description: "Scanning audio files for accurate duration." })
+
+        try {
+            const updatedItems = [...items]
+            let changed = false
+
+            for (let i = 0; i < updatedItems.length; i++) {
+                const item = updatedItems[i]
+                if (item.status === 'recorded') {
+                    // Assume filename convention
+                    const filename = `file_${String(i + 1).padStart(4, '0')}.wav`
+                    const filePath = `${currentProject.path}\\wavs\\${filename}`
+
+                    try {
+                        const buffer = await window.api.readAudio(filePath)
+                        // Decode to get duration
+                        const audioBuffer = await Tone.context.decodeAudioData(buffer)
+
+                        // If duration differs significantly from stored (> 0.1s), update it
+                        // OR if stored duration is suspiciously large (bytes)
+                        // Just update always to be safe
+                        updatedItems[i] = { ...item, duration: audioBuffer.duration }
+                        changed = true
+                    } catch (err) {
+                        console.error(`Failed to read duration for item ${i + 1}`, err)
+                        // Maybe mark as error? or Leave as is?
+                    }
+                }
+            }
+
+            if (changed) {
+                setItems(updatedItems)
+                await saveProject()
+                toast({ title: "Success", description: "Durations updated successfully." })
+            } else {
+                toast({ title: "No Changes", description: "All durations were already correct." })
+            }
+
+        } catch (e) {
+            console.error("Recalculation error", e)
+            toast({ title: "Error", description: "Failed to recalculate durations.", variant: "destructive" })
+        } finally {
+            setIsGenerating(false)
+        }
+    }
+
     const { toast } = useToast()
 
     useEffect(() => {
@@ -415,6 +463,18 @@ export default function ProjectPage() {
             const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
             const buffer = await blob.arrayBuffer()
 
+            // Calculate accurate duration
+            let duration = 0
+            try {
+                // Clone buffer because decodeAudioData might detach/neuter it
+                const bufferCopy = buffer.slice(0)
+                const audioBuffer = await Tone.context.decodeAudioData(bufferCopy)
+                duration = audioBuffer.duration
+            } catch (e) {
+                console.error("Failed to decode audio for duration calc:", e)
+                // Fallback: estimate from blob size? No, just use 0 or maybe track start/end time in future.
+            }
+
             if (isTempRecordingRef.current) {
                 // Temp Recording Logic
                 const timestamp = Date.now()
@@ -431,7 +491,7 @@ export default function ProjectPage() {
                         name: `temp_${timestamp}.wav`,
                         path: filename,
                         timestamp,
-                        duration: 0,
+                        duration: duration,
                         settings: { pitch, eq: { ...eq } }
                     })
                 }
@@ -441,7 +501,8 @@ export default function ProjectPage() {
 
                 if (currentProject) {
                     await window.api.saveAudio(buffer, filename, currentProject.path)
-                    updateItemStatus(currentItem.id, 'recorded', blob.size)
+                    // FIXED: Passing duration (seconds) instead of blob.size (bytes)
+                    updateItemStatus(currentItem.id, 'recorded', duration)
                     nextItem()
                 }
             }
@@ -463,27 +524,7 @@ export default function ProjectPage() {
         else startRecording()
     }
 
-    const handleGenerate = async () => {
-        if (!topic) return
-        setIsGenerating(true)
-        try {
-            const sentences = await window.api.generateText(topic, Number(count))
-            const newItems: ProjectItem[] = sentences.map(text => ({
-                id: generateUUID(),
-                text,
-                status: 'pending',
-                duration: 0
-            }))
-            addItems(newItems)
-            setIsGenOpen(false)
-            setTopic('')
-        } catch (e) {
-            console.error(e)
-            alert('Generation failed. Check API Keys.')
-        } finally {
-            setIsGenerating(false)
-        }
-    }
+
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -729,6 +770,20 @@ export default function ProjectPage() {
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
                         <h2 className="font-semibold truncate max-w-sm">{currentProject.name}</h2>
+                        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/20 text-xs font-mono text-muted-foreground border border-white/5 group relative cursor-help" title="Total Recorded Time">
+                            <Clock className="w-3 h-3 text-muted-foreground" />
+                            {formatDuration(calculateTotalDuration(items))}
+
+                            {/* Recalculate Button (Visible on Hover/Group or always) */}
+                            <button
+                                onClick={handleRecalculateDurations}
+                                className="ml-2 p-0.5 hover:bg-white/10 rounded-full text-muted-foreground hover:text-white transition-colors"
+                                title="Fix/Recalculate Durations (Click if time looks wrong)"
+                                disabled={isGenerating}
+                            >
+                                <RefreshCw className={`w-3 h-3 ${isGenerating ? 'animate-spin' : ''}`} />
+                            </button>
+                        </div>
                     </div>
                     <div className="w-64 flex items-center gap-2">
                         <span className="text-xs text-muted-foreground font-mono glow-text transition-all">{Math.round(progress)}%</span>

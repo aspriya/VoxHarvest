@@ -97,6 +97,8 @@ This document outlines the phased approach to building VoiceForge Desktop, with 
 
 ## Phase 5: Polish & Vibe
 -   **Visuals**: Glassmorphism, specific "Cyberpunk/Studio" aesthetic.
+-   **UX Improvements**:
+    -   [ ] **Recorded Time Display**: Calculate and show total duration of recorded items in the project header.
 -   **Testing**: E2E test for the "Record -> Save -> Export" critical path.
 
 ## Phase 6: Temp Recordings Feature

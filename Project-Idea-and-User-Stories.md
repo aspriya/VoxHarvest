@@ -265,6 +265,9 @@ When a user creates a project, the app creates a folder on their file system:
   * **Play:** User can click a "Play" icon on any "recorded" item to hear the saved audio for verification.
   * **Visual Feedback:** Waveform highlights (e.g., changes color) during playback to indicate active state.
 
+* **US-3.6 (Project Stats):**
+  * **Duration Display:** Show the total recorded time (sum of all recorded sentence durations) in the project header, next to the project name.
+
 ### Module 4: Export & Validation
 
 * **US-4.1 (Metadata Sync):** Every time a recording is saved, the app must rewrite/append to the `metadata.txt` file in the root project folder.
