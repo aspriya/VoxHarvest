@@ -6,9 +6,38 @@ import { randomUUID } from "node:crypto";
 import Store from "electron-store";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "ffmpeg-static";
+import { createWriteStream } from "node:fs";
+import archiver from "archiver";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import archiver from "archiver";
+const exportDatasetToPath = async (destinationPath, projectPath, items) => {
+  return new Promise(async (resolve, reject) => {
+    const output = createWriteStream(destinationPath);
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    output.on("close", () => {
+      resolve(destinationPath);
+    });
+    archive.on("error", (err) => {
+      reject(err);
+    });
+    archive.pipe(output);
+    const wavsDir = path.join(projectPath, "wavs");
+    const processedDir = path.join(projectPath, "wavs_processed");
+    let sourceDir = wavsDir;
+    try {
+      await fs.access(processedDir);
+      sourceDir = processedDir;
+    } catch {
+    }
+    archive.directory(sourceDir, "wavs");
+    const lines = items.filter((i) => i.status === "recorded").map((i, idx) => {
+      const filename = `file_${String(idx + 1).padStart(4, "0")}`;
+      return `${filename}|${i.text}|${i.text}`;
+    });
+    archive.append("\uFEFF" + lines.join("\n"), { name: "metadata.csv" });
+    await archive.finalize();
+  });
+};
 const __filename$1 = fileURLToPath(import.meta.url);
 const __dirname$1 = path.dirname(__filename$1);
 ipcMain.handle("read-audio", async (_, filePath) => {
@@ -132,24 +161,7 @@ ipcMain.handle("export-dataset", async (_, projectPath, items) => {
       filters: [{ name: "ZIP Archive", extensions: ["zip"] }]
     });
     if (result.canceled || !result.filePath) return null;
-    const output = require("fs").createWriteStream(result.filePath);
-    const archive = archiver("zip", { zlib: { level: 9 } });
-    archive.pipe(output);
-    const wavsDir = path.join(projectPath, "wavs");
-    const processedDir = path.join(projectPath, "wavs_processed");
-    let sourceDir = wavsDir;
-    try {
-      await fs.access(processedDir);
-      sourceDir = processedDir;
-    } catch {
-    }
-    archive.directory(sourceDir, "wavs");
-    const lines = items.filter((i) => i.status === "recorded").map((i, idx) => {
-      const filename = `file_${String(idx + 1).padStart(4, "0")}`;
-      return `${filename}|${i.text}|${i.text}`;
-    });
-    archive.append(lines.join("\n"), { name: "metadata.csv" });
-    await archive.finalize();
+    await exportDatasetToPath(result.filePath, projectPath, items);
     return result.filePath;
   } catch (e) {
     console.error("Export failed", e);

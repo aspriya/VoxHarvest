@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename)
 import { Project, ProjectCreationInfo, Settings } from '../src/types'
 import ffmpeg from 'fluent-ffmpeg'
 import ffmpegPath from 'ffmpeg-static'
+import { exportDatasetToPath } from './datasetExporter'
 ipcMain.handle('read-audio', async (_, filePath) => {
   try {
     const buffer = await fs.readFile(filePath)
@@ -61,7 +62,7 @@ ipcMain.handle('save-audio', async (_, buffer, filename, projectPath) => {
   }
 })
 
-import archiver from 'archiver'
+
 
 ipcMain.handle('trim-audio', async (_, filePath: string, start: number, end: number, applyDenoise: boolean) => {
   const tempEdited = path.join(app.getPath('temp'), `edited_${randomUUID()}.wav`)
@@ -187,40 +188,7 @@ ipcMain.handle('export-dataset', async (_, projectPath: string, items: any[]) =>
 
     if (result.canceled || !result.filePath) return null
 
-    const output = require('fs').createWriteStream(result.filePath)
-    const archive = archiver('zip', { zlib: { level: 9 } })
-
-    archive.pipe(output)
-
-    // 1. Add audio files
-    const wavsDir = path.join(projectPath, 'wavs')
-    const processedDir = path.join(projectPath, 'wavs_processed')
-
-    // Check if processed folder exists, prefer it
-    let sourceDir = wavsDir
-    try {
-      await fs.access(processedDir)
-      sourceDir = processedDir
-    } catch { }
-
-    archive.directory(sourceDir, 'wavs')
-
-    // 2. Generate Metadata.csv (LJSpeech format: ID|Transcription|NormalizedTranscription)
-    // We only have transcription, so we duplicate satisfied LJSpeech format
-    const lines = items
-      .filter((i: any) => i.status === 'recorded')
-      .map((i: any, idx: number) => {
-        // Filename depends on index or how we saved it. 
-        // In ProjectPage, we saved as file_0001.wav based on index.
-        // Items might be reordered? No, index logic was strict.
-        // Better to assume list order matches file_000X.wav if valid.
-        const filename = `file_${String(idx + 1).padStart(4, '0')}` // no ext in LJSpeech often, or with. Let's do without.
-        return `${filename}|${i.text}|${i.text}`
-      })
-
-    archive.append(lines.join('\n'), { name: 'metadata.csv' })
-
-    await archive.finalize()
+    await exportDatasetToPath(result.filePath, projectPath, items)
     return result.filePath
   } catch (e) {
     console.error("Export failed", e)
