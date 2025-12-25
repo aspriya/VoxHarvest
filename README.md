@@ -10,7 +10,7 @@ Whether you are building a voice model for a local dialect, a mixed-language cha
 
 Creating datasets for modern TTS models like VITS requires more than just recording audio. You need precise segmentation, consistent silence trimming, and perfect alignment between text and audio. VoxHarvest solves this by offering:
 
-*   **⚡ Mixed-Language Support:** Specifically optimized for handling scripts that blend a primary language (such as **Sinhala**) with English, essential for building robust modern TTS models that handle code-switching naturally.
+*   **⚡ Mixed-Language Support:** Originally developed for **Sinhala/English** code-switching, VoxHarvest is built to handle **any dual-language scenario**. It is the ideal tool for creating datasets where speakers switch seamlessly between a native tongue and English (or any other pair).
 *   **🎯 Precision Recording:** Integrated noise gate and silence detection ensure you capture only what matters—clean, usable audio.
 *   **✂️ Built-in Audio Editor:** Trim, cut, and normalize clips instantly without leaving the app. Use the specialized "Audio Editor" modal for fine-tuning.
 *   **📊 Project Management:** Organize thousands of clips (sentences) into manageable projects with clear status tracking (Recorded, Skipped, Verified).
@@ -30,6 +30,15 @@ Creating datasets for modern TTS models like VITS requires more than just record
 *   **Build Tool:** [Vite](https://vitejs.dev/)
 *   **Styling:** [Tailwind CSS](https://tailwindcss.com/) & [Radix UI](https://www.radix-ui.com/)
 *   **Audio Processing:** [Wavesurfer.js](https://wavesurfer-js.org/) & [FFmpeg](https://ffmpeg.org/)
+
+## 🤖 Development Workflow (Built with Antigravity)
+
+**This entire application was architected and iterated upon using Google Antigravity (Gemini 3.0).**
+
+We used the **'Mission Control'** to manage the roadmap and **'Project Agents'** to write the complex FFmpeg integrations and React state management. This "Vibe Coding" approach allowed us to move from concept to a production-grade Electron app with complex audio processing in record time.
+
+*   **Architected by:** Google Antigravity Agents
+*   **Powered by:** Gemini 3.0 Models
 
 ## 📦 Getting Started
 
