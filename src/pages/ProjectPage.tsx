@@ -11,6 +11,7 @@ import { ArrowLeft, Mic, Square, Play, SkipForward, SkipBack, Wand2, Loader2, Pl
 import GeneratorModal from '@/components/script-gen/GeneratorModal'
 import { AudioEditorModal } from '@/components/AudioEditorModal'
 import ExportModal from '@/components/ExportModal'
+import ScriptManagerModal from '@/components/ScriptManagerModal'
 import { useToast } from "@/hooks/use-toast"
 import { formatDuration, calculateTotalDuration } from '@/utils/timeFormat'
 // ...
@@ -287,6 +288,7 @@ export default function ProjectPage() {
     const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null)
     const [isExportOpen, setIsExportOpen] = useState(false)
     const [isExporting, setIsExporting] = useState(false)
+    const [isScriptManagerOpen, setIsScriptManagerOpen] = useState(false)
 
     const handleOpenEditor = async (index: number, e: React.MouseEvent) => {
         e.stopPropagation()
@@ -595,6 +597,9 @@ export default function ProjectPage() {
                             }
                         }} title="Import TXT">
                             <FileText className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsScriptManagerOpen(true)} title="Manage Script">
+                            <Edit2 className="h-4 w-4" />
                         </Button>
                         <Dialog open={isGenOpen} onOpenChange={setIsGenOpen}>
                             <DialogTrigger asChild>
@@ -943,6 +948,37 @@ export default function ProjectPage() {
                         })
                     } finally {
                         setIsExporting(false)
+                    }
+                }}
+            />
+            <ScriptManagerModal
+                isOpen={isScriptManagerOpen}
+                onClose={() => setIsScriptManagerOpen(false)}
+                items={items}
+                onAddItems={(texts) => {
+                    const newItems = texts.map(text => ({
+                        id: generateUUID(),
+                        text,
+                        status: 'pending' as const, // Fix type inference
+                        duration: 0
+                    }))
+                    addItems(newItems)
+                }}
+                onDeleteItem={(id) => {
+                    // Logic to delete item. 
+                    // This calls useProjectStore logic which we already have in ProjectPage: handleDeleteItem
+                    /* We can't reuse handleDeleteItem directly because it does confirm() and setIndex logic.
+                       The Modal handles its own confirm. 
+                       We need a raw delete function.
+                       Let's check if store exposes one? No, we use setItems in handleDeleteItem.
+                       So we can just replicate logic: filter and save.
+                    */
+                    const newItems = items.filter(i => i.id !== id)
+                    setItems(newItems)
+                    saveProject()
+                    // If deleted item was current, adjust index
+                    if (currentItemIndex >= newItems.length) {
+                        setCurrentIndex(Math.max(0, newItems.length - 1))
                     }
                 }}
             />

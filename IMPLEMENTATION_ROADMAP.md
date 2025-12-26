@@ -260,3 +260,14 @@ This document outlines the phased approach to building VoiceForge Desktop, with 
 -   **Modal**: Create `ExportModal`.
 -   **Inputs**: Radio Group for format selection.
 -   **Logic**: Pass selected format to backend.
+
+## Phase 13: Advanced Script Management
+**Goal**: Provide a dedicated interface for managing, editing, and bulk-importing script lines.
+
+### 13.1 Frontend (Script Manager)
+-   **UI**: Create `ScriptManagerModal` (or dedicated view).
+-   **Features**:
+    -   **Visual Distinction**: Highlight recorded vs. pending items.
+    -   **Bulk Add**: Text area for copy-pasting multiple new sentences.
+    -   **Edit/Delete**: distinct controls for modifying pending items.
+-   **Integration**: Add access point from Project Dashboard header.

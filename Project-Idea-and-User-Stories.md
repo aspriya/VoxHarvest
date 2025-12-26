@@ -393,3 +393,12 @@ When a user creates a project, the app creates a folder on their file system:
   * **Piper:** Standardize IDs (remove extension).
   * **Fish Speech:** Ensure directory structure `dataset/data/SpeakerName/`.
 
+### Module 10: Advanced Script Management
+* **US-10.1 (Script Manager View):**
+  * **Trigger:** Users can open a "Manage Script" window/modal from the project page.
+  * **View:** Displays a full list of all sentences in the project.
+  * **Distinction:** Recorded sentences are visually distinct (e.g., Green/Locked) from Pending sentences (Gray/Editable).
+* **US-10.2 (Bulk Add):**
+  * **Input:** A large text area allows users to paste a block of text.
+  * **Processing:** The app splits the text by newlines and adds them as new "Pending" items to the script.
+  * **Constraint:** Existing recorded items cannot be bulk-overwritten easily (safety check).
