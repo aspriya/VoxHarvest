@@ -2,6 +2,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { AudioEditorModal } from '../components/AudioEditorModal'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
+// Mock useAudioEngine if used (though AudioEditorModal uses WaveSurfer, it might not use AudioEngine directly, but let's be safe if it interacts with ProjectContext or similar)
+// Actually, checking AudioEditorModal code first is better.
+// But as a preventative measure, adding the mock doesn't hurt.
+vi.mock('@/hooks/useAudioEngine', () => ({
+    useAudioEngine: () => ({
+        state: {},
+        loadAudio: vi.fn(),
+        play: vi.fn(),
+        stop: vi.fn()
+    })
+}))
+
 // Mock WaveSurfer
 vi.mock('wavesurfer.js', () => {
     return {

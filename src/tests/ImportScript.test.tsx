@@ -6,6 +6,33 @@ import './setup'
 import { useSettingsStore } from '../store/settingsStore'
 import { useProjectStore } from '../store/projectStore'
 
+// Mocks
+vi.mock('@/components/EffectRack', () => ({
+    EffectRack: () => <div data-testid="effect-rack">Effect Rack</div>
+}))
+vi.mock('@/components/AudioVisualizer', () => ({
+    default: () => <div data-testid="audio-visualizer">Visualizer</div>
+}))
+vi.mock('@/hooks/useAudioEngine', () => ({
+    useAudioEngine: () => ({
+        state: {
+            isPlaying: false,
+            currentTime: 0,
+            duration: 0,
+            volume: 0,
+            pitch: 0,
+            playbackRate: 1,
+            eq: { low: 0, mid: 0, high: 0 }
+        },
+        loadAudio: vi.fn(),
+        play: vi.fn(),
+        stop: vi.fn(),
+        setPitch: vi.fn(),
+        setEQ: vi.fn(),
+        analyser: null
+    })
+}))
+
 describe('Import Script', () => {
     beforeEach(() => {
         // Reset store and mocks

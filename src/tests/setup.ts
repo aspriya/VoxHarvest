@@ -151,3 +151,8 @@ vi.mock('wavesurfer.js/dist/plugins/timeline.esm.js', () => {
         }
     }
 })
+
+process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled Rejection:', reason)
+})
+

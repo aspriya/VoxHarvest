@@ -79,8 +79,19 @@ This document outlines the test cases for the "VoxHarvest Desktop" application (
 
 | ID | Test Case | Pre-conditions | Steps | Expected Result |
 | :--- | :--- | :--- | :--- | :--- |
-| **TC-7.1** | **Export Dataset** | Project has recordings. | 1. Click "Export Dataset (Zip)". | 1. App generates a zip file containing `wavs` folder and `metadata.txt`.<br>2. Notification confirms success. |
-| **TC-7.2** | **Metadata Verification** | Export done. | 1. Unzip the exported file.<br>2. Open `metadata.txt`. | 1. File contains lines formatted as `file_id|text`.<br>2. Text matches the script. |
+| **TC-7.1** | **Export Dataset (Multi-Format)** | Project has recordings. | 1. Click "Export Dataset" in header.<br>2. Select Format (e.g., F5-TTS, Fish Speech).<br>3. Enter Speaker Name (if prompted).<br>4. Click "Export". | 1. Modal appears with format options.<br>2. Zip file generated.<br>3. Correct folder structure (e.g., `dataset.json` for F5, subfolders for Fish). |
+| **TC-7.2** | **Metadata Verification** | Export done. | 1. Unzip the exported file.<br>2. Check metadata file. | 1. F5: `dataset.json` with duration.<br>2. Piper: `metadata.csv` with pipe info.<br>3. Recordings renamed sequentially (file_0001, file_0002) regardless of gaps. |
+
+### 3.8 Module 8: Script Manager
+| ID | Test Case | Pre-conditions | Steps | Expected Result |
+| :--- | :--- | :--- | :--- | :--- |
+| **TC-8.1** | **Open Script Manager** | Inside Project. | 1. Click "Edit" (Pencil) icon in sidebar header. | 1. Modal opens displaying all sentences.<br>2. Recorded items are Green, Pending are Gray. |
+| **TC-8.2** | **Bulk Add** | Manager Open. | 1. Switch to "Add" tab.<br>2. Paste multiple lines of text.<br>3. Click "Add Sentences". | 1. New items are added to sidebar.<br>2. Manager closes (or updates). |
+
+### 3.9 Module 9: Clear Recording
+| ID | Test Case | Pre-conditions | Steps | Expected Result |
+| :--- | :--- | :--- | :--- | :--- |
+| **TC-9.1** | **Clear/Reset Recording** | Item "Recorded". | 1. Hover item row in project.<br>2. Click Orange "Reset" icon.<br>3. Confirm dialog. | 1. "Recorded" badge/color reverts to default.<br>2. "Play" button disappears.<br>3. Audio file deleted from disk (backend verify). |
 
 ---
 
