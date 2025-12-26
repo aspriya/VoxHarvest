@@ -269,5 +269,5 @@ This document outlines the phased approach to building VoiceForge Desktop, with 
 -   **Features**:
     -   **Visual Distinction**: Highlight recorded vs. pending items.
     -   **Bulk Add**: Text area for copy-pasting multiple new sentences.
-    -   **Edit/Delete**: distinct controls for modifying pending items.
+    -   **Edit/Delete/Reset**: Controls for modifying items. "Reset" clears audio but keeps text.
 -   **Integration**: Add access point from Project Dashboard header.

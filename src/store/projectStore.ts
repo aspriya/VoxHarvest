@@ -14,6 +14,7 @@ interface ProjectState {
     nextItem: () => void
     prevItem: () => void
     updateItemStatus: (id: string, status: ProjectItem['status'], duration?: number) => void
+    resetItemStatus: (id: string) => void
     saveProject: () => Promise<void>
     // Temp Recording Actions
     addTempRecording: (recording: TempRecording) => void
@@ -72,6 +73,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             )
         }))
         // Trigger auto-save
+        get().saveProject()
+    },
+
+    resetItemStatus: (id) => {
+        set(state => ({
+            items: state.items.map(item =>
+                item.id === id ? { ...item, status: 'pending', duration: 0 } : item
+            )
+        }))
         get().saveProject()
     },
 

@@ -23,59 +23,67 @@ const exportDatasetToPath = async (destinationPath, projectPath, items, format, 
     archive.pipe(output);
     const wavsDir = path.join(projectPath, "wavs");
     const processedDir = path.join(projectPath, "wavs_processed");
-    let sourceDir = wavsDir;
     try {
       await fs.access(processedDir);
-      sourceDir = processedDir;
     } catch {
     }
     const sanitizedSpeaker = speakerName.replace(/[^a-zA-Z0-9_-]/g, "_") || "Speaker";
     const recordedItems = items.filter((i) => i.status === "recorded");
+    for (let i = 0; i < recordedItems.length; i++) {
+      const item = recordedItems[i];
+      const originalIndex = items.findIndex((i2) => i2.id === item.id);
+      if (originalIndex === -1) continue;
+      const sourceFilename = `file_${String(originalIndex + 1).padStart(4, "0")}.wav`;
+      let sourcePath = path.join(wavsDir, sourceFilename);
+      const processedPath = path.join(processedDir, sourceFilename);
+      try {
+        await fs.access(processedPath);
+        sourcePath = processedPath;
+      } catch {
+        try {
+          await fs.access(sourcePath);
+        } catch {
+          console.warn(`Source file missing for item ${item.text}: ${sourcePath}`);
+          continue;
+        }
+      }
+      const targetFilename = `file_${String(i + 1).padStart(4, "0")}.wav`;
+      if (format === "fish") {
+        archive.file(sourcePath, { name: `dataset/data/${sanitizedSpeaker}/${targetFilename}` });
+      } else if (format === "xtts") {
+        archive.file(sourcePath, { name: `dataset/wavs/${targetFilename}` });
+      } else {
+        archive.file(sourcePath, { name: `dataset/wavs/${targetFilename}` });
+      }
+    }
     if (format === "f5") {
-      archive.directory(sourceDir, "dataset/wavs");
       const jsonMetadata = recordedItems.map((item, idx) => {
-        const filename = `file_${String(idx + 1).padStart(4, "0")}.wav`;
+        const targetFilename = `file_${String(idx + 1).padStart(4, "0")}.wav`;
         return {
-          audio_path: `wavs/${filename}`,
+          audio_path: `wavs/${targetFilename}`,
           text: item.text,
           duration: item.duration || 0
-          // Use stored duration or 0
         };
       });
       archive.append(JSON.stringify(jsonMetadata, null, 2), { name: "dataset/dataset.json" });
     } else if (format === "piper") {
-      archive.directory(sourceDir, "dataset/wavs");
       const lines = recordedItems.map((item, idx) => {
-        const filename = `file_${String(idx + 1).padStart(4, "0")}`;
-        return `${filename}|${item.text}`;
+        const targetId = `file_${String(idx + 1).padStart(4, "0")}`;
+        return `${targetId}|${item.text}`;
       });
       archive.append(lines.join("\n"), { name: "dataset/metadata.csv" });
     } else if (format === "xtts") {
-      archive.directory(sourceDir, "dataset/wavs");
       const lines = recordedItems.map((item, idx) => {
-        const filename = `file_${String(idx + 1).padStart(4, "0")}.wav`;
-        return `wavs/${filename}|${item.text}|${sanitizedSpeaker}`;
+        const targetFilename = `file_${String(idx + 1).padStart(4, "0")}.wav`;
+        return `wavs/${targetFilename}|${item.text}|${sanitizedSpeaker}`;
       });
       archive.append(lines.join("\n"), { name: "dataset/metadata.csv" });
     } else if (format === "fish") {
-      try {
-        for (let i = 0; i < recordedItems.length; i++) {
-          const item = recordedItems[i];
-          const filename = `file_${String(i + 1).padStart(4, "0")}.wav`;
-          const sourceFile = path.join(sourceDir, filename);
-          const targetWavName = `dataset/data/${sanitizedSpeaker}/${filename}`;
-          const targetLabName = `dataset/data/${sanitizedSpeaker}/${filename.replace(".wav", ".lab")}`;
-          try {
-            archive.file(sourceFile, { name: targetWavName });
-            archive.append(item.text, { name: targetLabName });
-          } catch (e) {
-            console.warn(`Could not add file for export: ${sourceFile}`);
-          }
-        }
-      } catch (e) {
-        console.error("Fish speech export setup failed", e);
-        reject(e);
-        return;
+      for (let i = 0; i < recordedItems.length; i++) {
+        const item = recordedItems[i];
+        const targetFilename = `file_${String(i + 1).padStart(4, "0")}.wav`;
+        const targetLabName = `dataset/data/${sanitizedSpeaker}/${targetFilename.replace(".wav", ".lab")}`;
+        archive.append(item.text, { name: targetLabName });
       }
     }
     await archive.finalize();

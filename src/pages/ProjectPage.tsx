@@ -54,7 +54,7 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
     // Safety check
     if (!data || !data.items) return null;
 
-    const { items, currentItemIndex, setCurrentIndex, handleEditItem, handleDeleteItem, handlePlayItem, handleOpenEditor } = data
+    const { items, currentItemIndex, setCurrentIndex, handleEditItem, handleDeleteItem, handlePlayItem, handleOpenEditor, handleResetItem } = data
     const item = items[index]
     if (!item) return null;
 
@@ -127,6 +127,20 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
                         </button>
                     )}
 
+                    {/* Reset Button */}
+                    {item.status === 'recorded' && !isEditing && (
+                        <button
+                            className="p-1 hover:bg-orange-500/20 text-muted-foreground hover:text-orange-400 rounded transition"
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                handleResetItem(item.id, index)
+                            }}
+                            title="Clear Recording (Keep Text)"
+                        >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                        </button>
+                    )}
+
                     {/* Edit Button */}
                     {!isEditing ? (
                         <button
@@ -175,7 +189,7 @@ export default function ProjectPage() {
     const {
         currentProject, items, currentItemIndex,
         loadProject, nextItem, prevItem, updateItemStatus, addItems, setCurrentIndex, setItems, saveProject,
-        addTempRecording, deleteTempRecording
+        addTempRecording, deleteTempRecording, resetItemStatus
     } = useProjectStore()
     const { openaiApiKey, geminiApiKey } = useSettingsStore()
 
@@ -224,6 +238,23 @@ export default function ProjectPage() {
         // Adjust index if needed
         if (currentItemIndex >= newItems.length) {
             setCurrentIndex(Math.max(0, newItems.length - 1))
+        }
+    }
+
+    const handleResetItem = async (id: string, index: number) => {
+        if (!confirm('Are you sure you want to clear this recording? This will delete the audio file but keep the sentence.')) return
+
+        // Logic path matches standard
+        const filename = `file_${String(index + 1).padStart(4, '0')}.wav`
+        const filePath = `${currentProject?.path}\\wavs\\${filename}`
+
+        try {
+            await window.api.deleteFile(filePath)
+            resetItemStatus(id)
+            toast({ title: "Cleared", description: "Recording deleted. Item is now pending." })
+        } catch (e) {
+            console.error("Failed to delete", e)
+            toast({ title: "Error", description: "Failed to delete file from disk.", variant: "destructive" })
         }
     }
 
@@ -690,7 +721,7 @@ export default function ProjectPage() {
                                 key={index}
                                 index={index}
                                 style={{ height: 48, width: '100%' }}
-                                data={{ items, currentItemIndex, setCurrentIndex, handleEditItem, handleDeleteItem, handlePlayItem, handleOpenEditor }}
+                                data={{ items, currentItemIndex, setCurrentIndex, handleEditItem, handleDeleteItem, handlePlayItem, handleOpenEditor, handleResetItem }}
                             />
                         )) : <div className="p-4 text-center text-muted-foreground text-sm">No script items</div>}
 

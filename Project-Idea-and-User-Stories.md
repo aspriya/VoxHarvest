@@ -261,6 +261,7 @@ When a user creates a project, the app creates a folder on their file system:
 * **US-3.4 (Script Management):**
   * **Edit:** User can click an "Edit" icon near the text to modify the sentence (fix typos, etc.). Updates `project.json`.
   * **Delete:** User can delete a sentence. App removes it from the list and cleans up associated `project.json` entry.
+  * **Reset:** User can "Clear Recording" to remove the audio but keep the sentence text (reverting status to `pending`). App deletes the underlying WAV file.
 * **US-3.5 (Playback):**
   * **Play:** User can click a "Play" icon on any "recorded" item to hear the saved audio for verification.
   * **Visual Feedback:** Waveform highlights (e.g., changes color) during playback to indicate active state.

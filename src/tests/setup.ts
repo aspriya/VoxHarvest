@@ -26,6 +26,7 @@ Object.defineProperty(window, 'api', {
         addToRecentProjects: vi.fn().mockResolvedValue(true),
         removeFromRecentProjects: vi.fn().mockResolvedValue(true),
         trimAudio: vi.fn().mockResolvedValue(true),
+        deleteFile: vi.fn().mockResolvedValue(true),
         previewAudio: vi.fn().mockResolvedValue(new ArrayBuffer(100)),
 
         // AI
