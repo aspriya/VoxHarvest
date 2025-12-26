@@ -70,7 +70,7 @@ export default function ScriptManagerModal({ isOpen, onClose, items, onAddItems,
                     </div>
                 </DialogHeader>
 
-                <Tabs defaultValue="list" className="flex-1 flex flex-col overflow-hidden">
+                <Tabs defaultValue="list" className="flex-1 flex flex-col overflow-hidden min-h-0">
                     <div className="px-6 border-b bg-muted/40 shrink-0">
                         <TabsList className="bg-transparent p-0 h-12 gap-6">
                             <TabsTrigger value="list" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-2 pt-2">
@@ -82,15 +82,15 @@ export default function ScriptManagerModal({ isOpen, onClose, items, onAddItems,
                         </TabsList>
                     </div>
 
-                    <TabsContent value="list" className="flex-1 overflow-hidden m-0 p-0">
+                    <TabsContent value="list" className="flex-1 overflow-hidden m-0 p-0 min-h-0 relative">
                         <ScrollArea className="h-full">
                             <div className="flex flex-col p-2">
                                 {items.map((item, index) => (
                                     <div
                                         key={item.id}
                                         className={`group flex items-center justify-between p-3 rounded-lg mb-1 transition-colors ${item.status === 'recorded'
-                                                ? 'bg-green-500/5 hover:bg-green-500/10 border border-green-500/20'
-                                                : 'text-muted-foreground hover:bg-white/5 border border-transparent'
+                                            ? 'bg-green-500/5 hover:bg-green-500/10 border border-green-500/20'
+                                            : 'text-muted-foreground hover:bg-white/5 border border-transparent'
                                             }`}
                                     >
                                         <div className="flex flex-1 min-w-0 items-center gap-4">
