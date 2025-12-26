@@ -18,9 +18,10 @@ interface EffectRackProps {
     state: AudioEngineState
     setPitch: (val: number) => void
     setEQ: (band: 'low' | 'mid' | 'high', val: number) => void
+    onExport: () => void
 }
 
-export function EffectRack({ state, setPitch, setEQ }: EffectRackProps) {
+export function EffectRack({ state, setPitch, setEQ, onExport }: EffectRackProps) {
     const { soundProfiles, addProfile } = useSettingsStore()
     const { currentProject, items } = useProjectStore()
     const [profileName, setProfileName] = useState('')
@@ -71,17 +72,6 @@ export function EffectRack({ state, setPitch, setEQ }: EffectRackProps) {
 
         setIsProcessing(false)
         alert(`Processed ${recordedItems.length} files to /wavs_processed!`)
-    }
-
-    const handleExport = async () => {
-        if (!currentProject) return
-        try {
-            const path = await window.api.exportDataset(currentProject.path, items)
-            if (path) alert(`Dataset exported to: ${path}`)
-        } catch (e) {
-            console.error(e)
-            alert("Export failed")
-        }
     }
 
     const handleSave = () => {
@@ -180,7 +170,7 @@ export function EffectRack({ state, setPitch, setEQ }: EffectRackProps) {
                         className="w-full text-xs font-semibold gap-2 mt-2"
                         size="sm"
                         variant="outline"
-                        onClick={handleExport}
+                        onClick={onExport}
                         disabled={!currentProject || items.filter(i => i.status === 'recorded').length === 0}
                     >
                         <Download className="h-3 w-3" />
@@ -188,6 +178,7 @@ export function EffectRack({ state, setPitch, setEQ }: EffectRackProps) {
                     </Button>
                 </div>
             </CardHeader>
+
             <CardContent className="flex-1 overflow-y-auto p-6 space-y-8">
 
                 {/* PITCH SHIFTER */}

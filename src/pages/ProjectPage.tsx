@@ -895,7 +895,7 @@ export default function ProjectPage() {
                 </main>
             </div>
 
-            <EffectRack state={audioState} setPitch={setPitch} setEQ={setEQ} />
+            <EffectRack state={audioState} setPitch={setPitch} setEQ={setEQ} onExport={() => setIsExportOpen(true)} />
 
             <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
                 <DialogContent>
