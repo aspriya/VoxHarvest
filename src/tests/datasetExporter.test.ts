@@ -54,64 +54,73 @@ vi.mock('archiver', () => {
 describe('exportDatasetToPath', () => {
     const mockProjectPath = '/mock/project'
     const mockDestination = '/mock/dest/dataset.zip'
+
+    // Gaps in items:
+    // Index 0: ID 1 (Recorded) -> Source file_0001
+    // Index 1: ID 2 (Pending)  -> Source file_0002 (Skipped)
+    // Index 2: ID 3 (Recorded) -> Source file_0003
+
     const mockItems = [
-        { status: 'recorded', text: 'Sentence 1', duration: 5 },
-        { status: 'recorded', text: 'Sentence 2', duration: 3 },
-        { status: 'pending', text: 'Sentence 3' }
+        { id: '1', status: 'recorded', text: 'Sentence 1', duration: 5 },
+        { id: '2', status: 'pending', text: 'Sentence 2' },
+        { id: '3', status: 'recorded', text: 'Sentence 3', duration: 3 }
     ]
 
     beforeEach(() => {
         vi.clearAllMocks()
+        // Mock fs.access to succeed
+        vi.mocked(fs.access).mockResolvedValue(undefined)
     })
 
-    it('exports F5-TTS format (JSON)', async () => {
+    it('exports F5-TTS format with sequential renumbering', async () => {
         const result = await exportDatasetToPath(mockDestination, mockProjectPath, mockItems, 'f5')
 
         expect(result).toBe(mockDestination)
         const archiveInstance = vi.mocked(archiver).mock.results[0].value
 
-        // Correct directory target
-        expect(archiveInstance.directory).toHaveBeenCalledWith(expect.any(String), 'dataset/wavs')
+        // Check Files: Source (based on org index) -> Target (sequential)
+        // Item 1 (Idx 0) -> Source file_0001.wav -> Target file_0001.wav
+        // Item 3 (Idx 2) -> Source file_0003.wav -> Target file_0002.wav
 
-        // Verify JSON
+        // We can check archive.file calls
+        // 1st call
+        expect(archiveInstance.file).toHaveBeenCalledWith(expect.stringContaining('file_0001.wav'), { name: 'dataset/wavs/file_0001.wav' })
+        // 2nd call
+        expect(archiveInstance.file).toHaveBeenCalledWith(expect.stringContaining('file_0003.wav'), { name: 'dataset/wavs/file_0002.wav' })
+
+        // Verify JSONMetadata matches Target filenames
         const expectedJSON = [
             { audio_path: "wavs/file_0001.wav", text: "Sentence 1", duration: 5 },
-            { audio_path: "wavs/file_0002.wav", text: "Sentence 2", duration: 3 }
+            { audio_path: "wavs/file_0002.wav", text: "Sentence 3", duration: 3 }
         ]
         expect(archiveInstance.append).toHaveBeenCalledWith(JSON.stringify(expectedJSON, null, 2), { name: 'dataset/dataset.json' })
     })
 
-    it('exports Piper format (CSV)', async () => {
+    it('exports Piper format (CSV) with renumbering', async () => {
         await exportDatasetToPath(mockDestination, mockProjectPath, mockItems, 'piper')
         const archiveInstance = vi.mocked(archiver).mock.results[0].value
 
-        expect(archiveInstance.directory).toHaveBeenCalledWith(expect.any(String), 'dataset/wavs')
+        expect(archiveInstance.file).toHaveBeenCalledWith(expect.stringContaining('file_0003.wav'), { name: 'dataset/wavs/file_0002.wav' })
 
-        const expectedCSV = "file_0001|Sentence 1\nfile_0002|Sentence 2"
+        const expectedCSV = "file_0001|Sentence 1\nfile_0002|Sentence 3"
         expect(archiveInstance.append).toHaveBeenCalledWith(expectedCSV, { name: 'dataset/metadata.csv' })
     })
 
-    it('exports XTTS v2 format (CSV with Speaker)', async () => {
+    it('exports XTTS v2 format (CSV) with renumbering', async () => {
         await exportDatasetToPath(mockDestination, mockProjectPath, mockItems, 'xtts', 'Ashan')
         const archiveInstance = vi.mocked(archiver).mock.results[0].value
 
-        expect(archiveInstance.directory).toHaveBeenCalledWith(expect.any(String), 'dataset/wavs')
+        expect(archiveInstance.file).toHaveBeenCalledWith(expect.stringContaining('file_0003.wav'), { name: 'dataset/wavs/file_0002.wav' })
 
-        const expectedCSV = "wavs/file_0001.wav|Sentence 1|Ashan\nwavs/file_0002.wav|Sentence 2|Ashan"
+        const expectedCSV = "wavs/file_0001.wav|Sentence 1|Ashan\nwavs/file_0002.wav|Sentence 3|Ashan"
         expect(archiveInstance.append).toHaveBeenCalledWith(expectedCSV, { name: 'dataset/metadata.csv' })
     })
 
-    it('exports Fish Speech format (Sidecar Labs)', async () => {
+    it('exports Fish Speech format with renumbering', async () => {
         await exportDatasetToPath(mockDestination, mockProjectPath, mockItems, 'fish', 'Speaker_1')
         const archiveInstance = vi.mocked(archiver).mock.results[0].value
 
-        // Should manually add files, not directory
-        // expect(archiveInstance.directory).not.toHaveBeenCalled() // Actually we removed directory call for fish, so this is implicitly true if not called
-
-        // Check manual file adds
-        // We mocked archive.file in beforeEach or need to add it to mockArchive
-
-        expect(archiveInstance.file).toHaveBeenCalledWith(expect.stringContaining('file_0001.wav'), { name: 'dataset/data/Speaker_1/file_0001.wav' })
-        expect(archiveInstance.append).toHaveBeenCalledWith('Sentence 1', { name: 'dataset/data/Speaker_1/file_0001.lab' })
+        expect(archiveInstance.file).toHaveBeenCalledWith(expect.stringContaining('file_0003.wav'), { name: 'dataset/data/Speaker_1/file_0002.wav' })
+        expect(archiveInstance.append).toHaveBeenCalledWith('Sentence 3', { name: 'dataset/data/Speaker_1/file_0002.lab' })
     })
 })
