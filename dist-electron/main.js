@@ -10,7 +10,7 @@ import { createWriteStream } from "node:fs";
 import archiver from "archiver";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-const exportDatasetToPath = async (destinationPath, projectPath, items) => {
+const exportDatasetToPath = async (destinationPath, projectPath, items, format, speakerName = "Speaker") => {
   return new Promise(async (resolve, reject) => {
     const output = createWriteStream(destinationPath);
     const archive = archiver("zip", { zlib: { level: 9 } });
@@ -29,12 +29,55 @@ const exportDatasetToPath = async (destinationPath, projectPath, items) => {
       sourceDir = processedDir;
     } catch {
     }
-    archive.directory(sourceDir, "wavs");
-    const lines = items.filter((i) => i.status === "recorded").map((i, idx) => {
-      const filename = `file_${String(idx + 1).padStart(4, "0")}`;
-      return `${filename}|${i.text}|${i.text}`;
-    });
-    archive.append("\uFEFF" + lines.join("\n"), { name: "metadata.csv" });
+    const sanitizedSpeaker = speakerName.replace(/[^a-zA-Z0-9_-]/g, "_") || "Speaker";
+    const recordedItems = items.filter((i) => i.status === "recorded");
+    if (format === "f5") {
+      archive.directory(sourceDir, "dataset/wavs");
+      const jsonMetadata = recordedItems.map((item, idx) => {
+        const filename = `file_${String(idx + 1).padStart(4, "0")}.wav`;
+        return {
+          audio_path: `wavs/${filename}`,
+          text: item.text,
+          duration: item.duration || 0
+          // Use stored duration or 0
+        };
+      });
+      archive.append(JSON.stringify(jsonMetadata, null, 2), { name: "dataset/dataset.json" });
+    } else if (format === "piper") {
+      archive.directory(sourceDir, "dataset/wavs");
+      const lines = recordedItems.map((item, idx) => {
+        const filename = `file_${String(idx + 1).padStart(4, "0")}`;
+        return `${filename}|${item.text}`;
+      });
+      archive.append(lines.join("\n"), { name: "dataset/metadata.csv" });
+    } else if (format === "xtts") {
+      archive.directory(sourceDir, "dataset/wavs");
+      const lines = recordedItems.map((item, idx) => {
+        const filename = `file_${String(idx + 1).padStart(4, "0")}.wav`;
+        return `wavs/${filename}|${item.text}|${sanitizedSpeaker}`;
+      });
+      archive.append(lines.join("\n"), { name: "dataset/metadata.csv" });
+    } else if (format === "fish") {
+      try {
+        for (let i = 0; i < recordedItems.length; i++) {
+          const item = recordedItems[i];
+          const filename = `file_${String(i + 1).padStart(4, "0")}.wav`;
+          const sourceFile = path.join(sourceDir, filename);
+          const targetWavName = `dataset/data/${sanitizedSpeaker}/${filename}`;
+          const targetLabName = `dataset/data/${sanitizedSpeaker}/${filename.replace(".wav", ".lab")}`;
+          try {
+            archive.file(sourceFile, { name: targetWavName });
+            archive.append(item.text, { name: targetLabName });
+          } catch (e) {
+            console.warn(`Could not add file for export: ${sourceFile}`);
+          }
+        }
+      } catch (e) {
+        console.error("Fish speech export setup failed", e);
+        reject(e);
+        return;
+      }
+    }
     await archive.finalize();
   });
 };
@@ -153,15 +196,16 @@ ipcMain.handle("delete-file", async (_, filePath) => {
     return false;
   }
 });
-ipcMain.handle("export-dataset", async (_, projectPath, items) => {
+ipcMain.handle("export-dataset", async (_, projectPath, items, format, speakerName) => {
   try {
+    const defaultName = format === "fish" ? "dataset_fish.zip" : "dataset.zip";
     const result = await dialog.showSaveDialog({
       title: "Export Dataset",
-      defaultPath: path.join(app.getPath("downloads"), "dataset.zip"),
+      defaultPath: path.join(app.getPath("downloads"), defaultName),
       filters: [{ name: "ZIP Archive", extensions: ["zip"] }]
     });
     if (result.canceled || !result.filePath) return null;
-    await exportDatasetToPath(result.filePath, projectPath, items);
+    await exportDatasetToPath(result.filePath, projectPath, items, format, speakerName);
     return result.filePath;
   } catch (e) {
     console.error("Export failed", e);

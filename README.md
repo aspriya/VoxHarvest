@@ -10,11 +10,13 @@ Whether you are building a voice model for a local dialect, a mixed-language cha
 
 Creating datasets for modern TTS models like VITS requires more than just recording audio. You need precise segmentation, consistent silence trimming, and perfect alignment between text and audio. VoxHarvest solves this by offering:
 
+
+*   **🔥 Universal Export Power:** Whether you're training the latest **F5-TTS** flow-matching model, sticking to the industry-standard **Piper**, or experimenting with **XTTS v2** and **Fish Speech**, we've got you covered. Export to **ANY** format with a single click!
 *   **⚡ Mixed-Language Support:** Originally developed for **Sinhala/English** code-switching, VoxHarvest is built to handle **any dual-language scenario**. It is the ideal tool for creating datasets where speakers switch seamlessly between a native tongue and English (or any other pair).
 *   **🎯 Precision Recording:** Integrated noise gate and silence detection ensure you capture only what matters—clean, usable audio.
 *   **✂️ Built-in Audio Editor:** Trim, cut, and normalize clips instantly without leaving the app. Use the specialized "Audio Editor" modal for fine-tuning.
 *   **📊 Project Management:** Organize thousands of clips (sentences) into manageable projects with clear status tracking (Recorded, Skipped, Verified).
-*   **🤖 One-Click Export:** Generates the exact directory structure and metadata files required for **VITS fast fine-tuning** on Google Colab. No more manual file renaming!
+*   **🤖 Smart Metadata:** Automatically formats your data for **VITS**, **F5**, **XTTS**, or **Fish Speech** pipelines. No more manual file renaming or CSV wrangling!
 
 ## ✨ Key Features
 

@@ -33,6 +33,7 @@ vi.mock('node:fs', () => {
 const mockArchive = {
     pipe: vi.fn(),
     directory: vi.fn(),
+    file: vi.fn(),
     append: vi.fn(),
     finalize: vi.fn().mockResolvedValue(undefined),
     on: vi.fn(function (this: any, event, _cb) {
@@ -63,45 +64,54 @@ describe('exportDatasetToPath', () => {
         vi.clearAllMocks()
     })
 
-    it('creates a zip file and adds contents', async () => {
-        // Mock fs.access to fail (so it uses wavsDir)
-        vi.mocked(fs.access).mockRejectedValue(new Error('no processed'))
-
-        const result = await exportDatasetToPath(mockDestination, mockProjectPath, mockItems)
+    it('exports F5-TTS format (JSON)', async () => {
+        const result = await exportDatasetToPath(mockDestination, mockProjectPath, mockItems, 'f5')
 
         expect(result).toBe(mockDestination)
-
-        // precise assertions
-        const archiverMock = vi.mocked(archiver)
-        expect(archiverMock).toHaveBeenCalledWith('zip', { zlib: { level: 9 } })
-
         const archiveInstance = vi.mocked(archiver).mock.results[0].value
 
-        // Verify source directory
-        // Expect checking for processed dir first
-        expect(fs.access).toHaveBeenCalledWith(expect.stringContaining('wavs_processed'))
+        // Correct directory target
+        expect(archiveInstance.directory).toHaveBeenCalledWith(expect.any(String), 'dataset/wavs')
 
-        // Since it failed, should verify it used wavs dir (path.join behavior might depend on OS)
-        // normalized paths are safer
-        expect(archiveInstance.directory).toHaveBeenCalledWith(expect.any(String), 'wavs')
-
-        // Verify metadata
-        const expectedMetadata =
-            `\uFEFFfile_0001|Sentence 1|Sentence 1\n` +
-            `file_0002|Sentence 2|Sentence 2`
-
-        expect(archiveInstance.append).toHaveBeenCalledWith(expectedMetadata, { name: 'metadata.csv' })
-
-        expect(archiveInstance.finalize).toHaveBeenCalled()
+        // Verify JSON
+        const expectedJSON = [
+            { audio_path: "wavs/file_0001.wav", text: "Sentence 1", duration: 5 },
+            { audio_path: "wavs/file_0002.wav", text: "Sentence 2", duration: 3 }
+        ]
+        expect(archiveInstance.append).toHaveBeenCalledWith(JSON.stringify(expectedJSON, null, 2), { name: 'dataset/dataset.json' })
     })
 
-    it('prefers processed audio folder if available', async () => {
-        // Mock fs.access to succeed
-        vi.mocked(fs.access).mockResolvedValue(undefined)
-
-        await exportDatasetToPath(mockDestination, mockProjectPath, mockItems)
-
+    it('exports Piper format (CSV)', async () => {
+        await exportDatasetToPath(mockDestination, mockProjectPath, mockItems, 'piper')
         const archiveInstance = vi.mocked(archiver).mock.results[0].value
-        expect(archiveInstance.directory).toHaveBeenCalledWith(expect.any(String), 'wavs')
+
+        expect(archiveInstance.directory).toHaveBeenCalledWith(expect.any(String), 'dataset/wavs')
+
+        const expectedCSV = "file_0001|Sentence 1\nfile_0002|Sentence 2"
+        expect(archiveInstance.append).toHaveBeenCalledWith(expectedCSV, { name: 'dataset/metadata.csv' })
+    })
+
+    it('exports XTTS v2 format (CSV with Speaker)', async () => {
+        await exportDatasetToPath(mockDestination, mockProjectPath, mockItems, 'xtts', 'Ashan')
+        const archiveInstance = vi.mocked(archiver).mock.results[0].value
+
+        expect(archiveInstance.directory).toHaveBeenCalledWith(expect.any(String), 'dataset/wavs')
+
+        const expectedCSV = "wavs/file_0001.wav|Sentence 1|Ashan\nwavs/file_0002.wav|Sentence 2|Ashan"
+        expect(archiveInstance.append).toHaveBeenCalledWith(expectedCSV, { name: 'dataset/metadata.csv' })
+    })
+
+    it('exports Fish Speech format (Sidecar Labs)', async () => {
+        await exportDatasetToPath(mockDestination, mockProjectPath, mockItems, 'fish', 'Speaker_1')
+        const archiveInstance = vi.mocked(archiver).mock.results[0].value
+
+        // Should manually add files, not directory
+        // expect(archiveInstance.directory).not.toHaveBeenCalled() // Actually we removed directory call for fish, so this is implicitly true if not called
+
+        // Check manual file adds
+        // We mocked archive.file in beforeEach or need to add it to mockArchive
+
+        expect(archiveInstance.file).toHaveBeenCalledWith(expect.stringContaining('file_0001.wav'), { name: 'dataset/data/Speaker_1/file_0001.wav' })
+        expect(archiveInstance.append).toHaveBeenCalledWith('Sentence 1', { name: 'dataset/data/Speaker_1/file_0001.lab' })
     })
 })

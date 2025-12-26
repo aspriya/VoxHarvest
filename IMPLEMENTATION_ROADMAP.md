@@ -243,3 +243,20 @@ This document outlines the phased approach to building VoiceForge Desktop, with 
     5.  Frontend plays buffer using `Tone.context.decodeAudioData`.
     6.  Temp file is deleted immediately after reading.
 
+
+## Phase 12: Enhanced Dataset Export
+**Goal**: Support multiple dataset formats for modern TTS flow-matching models (F5-TTS, Fish Speech) and legacy standards (Piper, XTTS).
+
+### 12.1 Backend (Export Engine)
+-   **Updates**: Modify `export-dataset` IPC handler to accept `format` argument.
+-   **Strategies**:
+    -   **F5-TTS**: JSON structure (`audio_path`, `text`, `duration`).
+    -   **Piper**: CSV (`id|text`), strict filename matching.
+    -   **XTTS v2**: CSV (`wavs/path|text|speaker`), absolute or relative paths.
+    -   **Fish Speech**: Sidecar `.lab` files + Speaker containment folder.
+-   **Refactoring**: Update `datasetExporter.ts` to implement strict adapter pattern for each format.
+
+### 12.2 Frontend (UI)
+-   **Modal**: Create `ExportModal`.
+-   **Inputs**: Radio Group for format selection.
+-   **Logic**: Pass selected format to backend.

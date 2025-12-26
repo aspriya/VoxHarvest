@@ -10,6 +10,7 @@ import AudioVisualizer from '@/components/AudioVisualizer'
 import { ArrowLeft, Mic, Square, Play, SkipForward, SkipBack, Wand2, Loader2, Plus, Trash2, Edit2, PlayCircle, FileText, Scissors, Clock, RefreshCw } from 'lucide-react'
 import GeneratorModal from '@/components/script-gen/GeneratorModal'
 import { AudioEditorModal } from '@/components/AudioEditorModal'
+import ExportModal from '@/components/ExportModal'
 import { useToast } from "@/hooks/use-toast"
 import { formatDuration, calculateTotalDuration } from '@/utils/timeFormat'
 // ...
@@ -284,6 +285,8 @@ export default function ProjectPage() {
     const [editorOpen, setEditorOpen] = useState(false)
     const [editorAudioUrl, setEditorAudioUrl] = useState<string | null>(null)
     const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null)
+    const [isExportOpen, setIsExportOpen] = useState(false)
+    const [isExporting, setIsExporting] = useState(false)
 
     const handleOpenEditor = async (index: number, e: React.MouseEvent) => {
         e.stopPropagation()
@@ -785,9 +788,23 @@ export default function ProjectPage() {
                             </button>
                         </div>
                     </div>
-                    <div className="w-64 flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground font-mono glow-text transition-all">{Math.round(progress)}%</span>
-                        <Progress value={progress} className="h-1.5 bg-secondary/50" />
+                    <div className="w-64 flex items-center gap-4">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 gap-2 border-white/10"
+                            onClick={() => setIsExportOpen(true)}
+                        >
+                            Export
+                        </Button>
+
+                        <div className="flex-1 flex flex-col gap-1">
+                            <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+                                <span>{Math.round(progress)}%</span>
+                                <span>{items.length} items</span>
+                            </div>
+                            <Progress value={progress} className="h-1 bg-secondary/30" />
+                        </div>
                     </div>
                 </header>
 
@@ -898,6 +915,37 @@ export default function ProjectPage() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            <ExportModal
+                isOpen={isExportOpen}
+                onClose={() => setIsExportOpen(false)}
+                isExporting={isExporting}
+                onExport={async (format, speakerName) => {
+                    if (!currentProject) return
+                    setIsExporting(true)
+                    try {
+                        const path = await window.api.exportDataset(currentProject.path, items, format, speakerName)
+                        if (path) {
+                            toast({
+                                title: "Export Successful",
+                                description: `Dataset saved to ${path}`
+                            })
+                            setIsExportOpen(false)
+                        } else {
+                            // Cancelled
+                        }
+                    } catch (e) {
+                        console.error("Export failed", e)
+                        toast({
+                            title: "Export Failed",
+                            description: "See console for details.",
+                            variant: "destructive"
+                        })
+                    } finally {
+                        setIsExporting(false)
+                    }
+                }}
+            />
         </div >
     )
 }

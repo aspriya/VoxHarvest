@@ -380,3 +380,16 @@ When a user creates a project, the app creates a folder on their file system:
   * **Requirement:** Users must be able to hear the effect of noise reduction *before* committing to a destructive save.
   * **Interaction:** A "Preview Effect" button in the Editor.
   * **System:** Backend generates a temporary processed clip of the selected region and plays it back to the user without overwriting the original file.
+
+### Module 9: Advanced Export Options
+* **US-9.1 (Export Modal):**
+  * **Trigger:** Clicking "Export Dataset" opens a dedicated modal instead of immediately saving.
+  * **Option 1 (F5-TTS):** Generates `dataset.json` with `audio_path`, `text`, `duration`. Optimized for flow-matching.
+  * **Option 2 (Piper/LJSpeech):** Generates pipe-separated CSV `id|text`, compatible with legacy production models.
+  * **Option 3 (XTTS v2):** Generates CSV with `dataset/wavs/file.wav|text|SpeakerName`.
+  * **Option 4 (Fish Speech):** Generates sidecar `.lab` text files for every WAV, organized in a Speaker subfolder.
+* **US-9.2 (Format Logic):**
+  * **F5-TTS:** Must calculate audio duration if missing (though app tracks it).
+  * **Piper:** Standardize IDs (remove extension).
+  * **Fish Speech:** Ensure directory structure `dataset/data/SpeakerName/`.
+

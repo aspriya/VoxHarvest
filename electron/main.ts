@@ -178,17 +178,19 @@ ipcMain.handle('delete-file', async (_, filePath) => {
   }
 })
 
-ipcMain.handle('export-dataset', async (_, projectPath: string, items: any[]) => {
+ipcMain.handle('export-dataset', async (_, projectPath: string, items: any[], format: 'f5' | 'piper' | 'xtts' | 'fish', speakerName: string) => {
   try {
+    const defaultName = format === 'fish' ? 'dataset_fish.zip' : 'dataset.zip'
+
     const result = await dialog.showSaveDialog({
       title: 'Export Dataset',
-      defaultPath: path.join(app.getPath('downloads'), 'dataset.zip'),
+      defaultPath: path.join(app.getPath('downloads'), defaultName),
       filters: [{ name: 'ZIP Archive', extensions: ['zip'] }]
     })
 
     if (result.canceled || !result.filePath) return null
 
-    await exportDatasetToPath(result.filePath, projectPath, items)
+    await exportDatasetToPath(result.filePath, projectPath, items, format, speakerName)
     return result.filePath
   } catch (e) {
     console.error("Export failed", e)
